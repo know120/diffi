@@ -1,0 +1,2 @@
+[console_scripts]
+diffi = diffi.main_window:main

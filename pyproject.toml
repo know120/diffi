@@ -1,0 +1,21 @@
+[project]
+name = "diffi"
+version = "0.1.0"
+description = "API response comparison desktop app — detect differences between old and new API responses"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pyside6>=6.11.1",
+    "requests>=2.34.2",
+]
+
+[tool.uv.sources]
+
+[project.scripts]
+diffi = "diffi.main_window:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv]
+package = true

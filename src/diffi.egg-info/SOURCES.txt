@@ -1,0 +1,12 @@
+README.md
+pyproject.toml
+src/diffi/__init__.py
+src/diffi/__main__.py
+src/diffi/comparator.py
+src/diffi/main_window.py
+src/diffi.egg-info/PKG-INFO
+src/diffi.egg-info/SOURCES.txt
+src/diffi.egg-info/dependency_links.txt
+src/diffi.egg-info/entry_points.txt
+src/diffi.egg-info/requires.txt
+src/diffi.egg-info/top_level.txt
