@@ -598,11 +598,22 @@ class DiffiWindow(QMainWindow):
         # Fetch button + progress
         fetch_row = QHBoxLayout()
         self._fetch_btn = QPushButton("▶ Run Comparison")
-        self._fetch_btn.setStyleSheet(
-            "background-color: #059669; color: white; font-weight: bold; padding: 10px 24px; border-radius: 6px;"
-            "QPushButton:hover { background-color: #047857; }"
-            "QPushButton:disabled { background-color: #065f46; color: #94a3b8; }"
-        )
+        self._fetch_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #059669;
+                color: white;
+                font-weight: bold;
+                padding: 10px 24px;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #047857;
+            }
+            QPushButton:disabled {
+                background-color: #065f46;
+                color: #94a3b8;
+            }
+        """)
         self._fetch_btn.clicked.connect(self._on_fetch)
         self._progress = QProgressBar()
         self._progress.setVisible(False)
