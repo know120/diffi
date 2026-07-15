@@ -1,2 +1,0 @@
-pyside6>=6.11.1
-requests>=2.34.2

@@ -1,8 +1,0 @@
-Metadata-Version: 2.4
-Name: diffi
-Version: 0.1.0
-Summary: API response comparison desktop app — detect differences between old and new API responses
-Requires-Python: >=3.10
-Description-Content-Type: text/markdown
-Requires-Dist: pyside6>=6.11.1
-Requires-Dist: requests>=2.34.2
