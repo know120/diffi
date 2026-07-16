@@ -21,12 +21,23 @@ def collect_fields(obj: Any, prefix: str = "") -> list[dict]:
     return fields
 
 
+def _is_ignored(path: str, ignore_fields: set[str]) -> bool:
+    for ignored in ignore_fields:
+        if path == ignored or path.startswith(ignored + ".") or path.startswith(ignored + "["):
+            return True
+    return False
+
+
 def deep_compare(
-    old_obj: Any, new_obj: Any, path: str = ""
+    old_obj: Any, new_obj: Any, path: str = "",
+    ignore_fields: set[str] | None = None,
 ) -> dict:
     missing: list[dict] = []
     extra: list[dict] = []
     type_changes: list[dict] = []
+
+    if ignore_fields is None:
+        ignore_fields = set()
 
     all_keys: set[str] = set()
     if isinstance(old_obj, dict):
@@ -36,6 +47,9 @@ def deep_compare(
 
     for key in sorted(all_keys):
         current_path = f"{path}.{key}" if path else key
+
+        if _is_ignored(current_path, ignore_fields):
+            continue
 
         old_exists = isinstance(old_obj, dict) and key in old_obj
         new_exists = isinstance(new_obj, dict) and key in new_obj
@@ -71,12 +85,14 @@ def deep_compare(
                 max_len = max(len(old_val), len(new_val))
                 for i in range(max_len):
                     item_path = f"{current_path}[{i}]"
+                    if _is_ignored(item_path, ignore_fields):
+                        continue
                     if i >= len(old_val):
                         extra.append({"path": item_path, "value": new_val[i]})
                     elif i >= len(new_val):
                         missing.append({"path": item_path, "value": old_val[i]})
                     else:
-                        sub = deep_compare(old_val[i], new_val[i], item_path)
+                        sub = deep_compare(old_val[i], new_val[i], item_path, ignore_fields)
                         missing.extend(sub["missing"])
                         extra.extend(sub["extra"])
                         type_changes.extend(sub["typeChanges"])
@@ -92,7 +108,7 @@ def deep_compare(
             continue
 
         if isinstance(old_val, dict) and isinstance(new_val, dict):
-            sub = deep_compare(old_val, new_val, current_path)
+            sub = deep_compare(old_val, new_val, current_path, ignore_fields)
             missing.extend(sub["missing"])
             extra.extend(sub["extra"])
             type_changes.extend(sub["typeChanges"])
