@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDockWidget,
     QFileDialog,
+    QFrame,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -47,20 +48,26 @@ HISTORY_FILE = Path.home() / ".diffi_history.json"
 PROFILES_FILE = Path.home() / ".diffi_profiles.json"
 MAX_HISTORY = 50
 
-BTN_STYLE = (
-    "QPushButton { padding: 3px 8px; font-size: 11px; border-radius: 3px; }"
-)
-BTN_PRIMARY = (
-    "QPushButton { padding: 3px 8px; font-size: 11px; border-radius: 3px; "
-    "background-color: #059669; color: white; }"
-    "QPushButton:hover { background-color: #047857; }"
-    "QPushButton:disabled { background-color: #065f46; color: #94a3b8; }"
-)
-BTN_DANGER = (
-    "QPushButton { padding: 3px 8px; font-size: 11px; border-radius: 3px; "
-    "background-color: #7f1d1d; color: #fca5a5; }"
-    "QPushButton:hover { background-color: #991b1b; }"
-)
+# -- Color palette --
+C = {
+    "bg": "#0d1117",
+    "surface": "#161b22",
+    "surface2": "#1c2128",
+    "border": "#30363d",
+    "border2": "#21262d",
+    "text": "#f0f6fc",
+    "text2": "#8b949e",
+    "text3": "#484f58",
+    "accent": "#58a6ff",
+    "accent2": "#1f6feb",
+    "green": "#3fb950",
+    "green_bg": "#0d2818",
+    "yellow": "#d29922",
+    "yellow_bg": "#2d1600",
+    "red": "#f85149",
+    "red_bg": "#2d0b0b",
+    "blue_bg": "#0c2d6b",
+}
 
 
 def load_json(path: Path) -> Any:
@@ -262,6 +269,24 @@ class ApiWorker(QThread):
 
 
 # ---------------------------------------------------------------------------
+# Helper: Card frame
+# ---------------------------------------------------------------------------
+
+
+class Card(QFrame):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        self.setStyleSheet(f"""
+            Card {{
+                background: {C['surface']};
+                border: 1px solid {C['border']};
+                border-radius: 8px;
+            }}
+        """)
+
+
+# ---------------------------------------------------------------------------
 # ApiFormWidget
 # ---------------------------------------------------------------------------
 
@@ -271,62 +296,67 @@ AUTH_TYPES = ["None", "Basic Auth", "Bearer Token", "OAuth2"]
 class ApiFormWidget(QWidget):
     def __init__(self, label: str, parent=None):
         super().__init__(parent)
-        self.setStyleSheet("""
-            QGroupBox { font-weight: bold; border: 1px solid #2d3748; border-radius: 6px; margin-top: 6px; padding-top: 14px; }
-            QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; }
-        """)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(4)
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
 
-        group = QGroupBox(label)
-        glayout = QGridLayout(group)
-        glayout.setSpacing(4)
-        glayout.setContentsMargins(8, 12, 8, 8)
+        card = Card()
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(16, 16, 16, 16)
+        card_layout.setSpacing(10)
 
-        glayout.addWidget(QLabel("URL"), 0, 0)
+        # Section header
+        hdr = QLabel(label)
+        hdr.setStyleSheet(f"font-size: 14px; font-weight: 600; color: {C['text']}; background: transparent; border: none;")
+        card_layout.addWidget(hdr)
+
+        # URL row
+        url_row = QHBoxLayout()
+        url_row.setSpacing(8)
+        url_lbl = QLabel("URL")
+        url_lbl.setFixedWidth(32)
+        url_lbl.setStyleSheet(f"color: {C['text2']}; font-size: 12px; background: transparent;")
         self.url_input = QLineEdit()
         self.url_input.setPlaceholderText("https://api.example.com/v1/{{id}}")
-        glayout.addWidget(self.url_input, 0, 1)
+        url_row.addWidget(url_lbl)
+        url_row.addWidget(self.url_input, 1)
 
-        glayout.addWidget(QLabel("Method"), 0, 2)
+        method_lbl = QLabel("Method")
+        method_lbl.setStyleSheet(f"color: {C['text2']}; font-size: 12px; background: transparent;")
         self.method_combo = QComboBox()
         self.method_combo.addItems(METHODS)
-        self.method_combo.setFixedWidth(80)
-        glayout.addWidget(self.method_combo, 0, 3)
+        self.method_combo.setFixedWidth(76)
+        url_row.addWidget(method_lbl)
+        url_row.addWidget(self.method_combo)
 
-        glayout.addWidget(QLabel("Auth"), 0, 4)
+        auth_lbl = QLabel("Auth")
+        auth_lbl.setStyleSheet(f"color: {C['text2']}; font-size: 12px; background: transparent;")
         self.auth_combo = QComboBox()
         self.auth_combo.addItems(AUTH_TYPES)
         self.auth_combo.setFixedWidth(100)
         self.auth_combo.currentTextChanged.connect(self._on_auth_changed)
-        glayout.addWidget(self.auth_combo, 0, 5)
+        url_row.addWidget(auth_lbl)
+        url_row.addWidget(self.auth_combo)
+        card_layout.addLayout(url_row)
 
-        # Auth fields
-        self._auth_container = QHBoxLayout()
+        # Auth fields (horizontal, hidden by default)
         self._auth_basic_user = QLineEdit()
-        self._auth_basic_user.setPlaceholderText("User")
-        self._auth_basic_user.setFixedWidth(120)
+        self._auth_basic_user.setPlaceholderText("Username")
         self._auth_basic_pwd = QLineEdit()
-        self._auth_basic_pwd.setPlaceholderText("Pass")
+        self._auth_basic_pwd.setPlaceholderText("Password")
         self._auth_basic_pwd.setEchoMode(QLineEdit.EchoMode.Password)
-        self._auth_basic_pwd.setFixedWidth(120)
 
         self._auth_bearer_token = QLineEdit()
-        self._auth_bearer_token.setPlaceholderText("Token")
-        self._auth_bearer_token.setFixedWidth(260)
+        self._auth_bearer_token.setPlaceholderText("Bearer token")
 
         self._auth_oauth2_client_id = QLineEdit()
         self._auth_oauth2_client_id.setPlaceholderText("Client ID")
-        self._auth_oauth2_client_id.setFixedWidth(120)
         self._auth_oauth2_client_secret = QLineEdit()
-        self._auth_oauth2_client_secret.setPlaceholderText("Secret")
+        self._auth_oauth2_client_secret.setPlaceholderText("Client secret")
         self._auth_oauth2_client_secret.setEchoMode(QLineEdit.EchoMode.Password)
-        self._auth_oauth2_client_secret.setFixedWidth(120)
         self._auth_oauth2_token_url = QLineEdit()
         self._auth_oauth2_token_url.setPlaceholderText("Token URL")
-        self._auth_oauth2_token_url.setFixedWidth(200)
 
         self._auth_widgets: dict[str, list[QWidget]] = {
             "None": [],
@@ -338,81 +368,84 @@ class ApiFormWidget(QWidget):
                 self._auth_oauth2_token_url,
             ],
         }
-        auth_row = QHBoxLayout()
-        auth_row.setSpacing(4)
+        self._auth_row_widget = QWidget()
+        self._auth_row_widget.setStyleSheet("background: transparent;")
+        self._auth_row = QHBoxLayout(self._auth_row_widget)
+        self._auth_row.setContentsMargins(0, 0, 0, 0)
+        self._auth_row.setSpacing(6)
         for w in sum(self._auth_widgets.values(), []):
-            auth_row.addWidget(w)
+            self._auth_row.addWidget(w)
             w.setVisible(False)
-        auth_row.addStretch()
-        auth_widget = QWidget()
-        auth_widget.setLayout(auth_row)
-        glayout.addWidget(auth_widget, 1, 0, 1, 6)
+        self._auth_row.addStretch()
+        card_layout.addWidget(self._auth_row_widget)
+        self._auth_row_widget.setVisible(False)
 
         # Headers
         self.header_rows: list[dict] = []
-        headers_widget = QWidget()
-        headers_layout = QVBoxLayout(headers_widget)
-        headers_layout.setContentsMargins(0, 0, 0, 0)
-        headers_layout.setSpacing(2)
-
-        h_row = QHBoxLayout()
-        h_row.setSpacing(4)
-        h_row.addWidget(QLabel("Headers"))
-        h_row.addStretch()
-        add_header_btn = QPushButton("+")
-        add_header_btn.setFixedSize(22, 22)
-        add_header_btn.setStyleSheet(BTN_STYLE)
-        add_header_btn.clicked.connect(lambda: self._add_header_row())
-        h_row.addWidget(add_header_btn)
-        headers_layout.addLayout(h_row)
+        h_hdr_row = QHBoxLayout()
+        h_hdr_row.setSpacing(4)
+        h_label = QLabel("Headers")
+        h_label.setStyleSheet(f"color: {C['text2']}; font-size: 12px; background: transparent;")
+        h_hdr_row.addWidget(h_label)
+        h_hdr_row.addStretch()
+        self._add_header_btn = QPushButton("+")
+        self._add_header_btn.setFixedSize(24, 24)
+        self._add_header_btn.clicked.connect(lambda: self._add_header_row())
+        h_hdr_row.addWidget(self._add_header_btn)
+        card_layout.addLayout(h_hdr_row)
 
         self.headers_container = QVBoxLayout()
         self.headers_container.setSpacing(2)
-        headers_layout.addLayout(self.headers_container)
-        glayout.addWidget(headers_widget, 2, 0, 1, 6)
+        self.headers_container.setContentsMargins(0, 0, 0, 0)
+        card_layout.addLayout(self.headers_container)
 
         # Params
         self.param_rows: list[dict] = []
-        params_widget = QWidget()
-        params_layout = QVBoxLayout(params_widget)
-        params_layout.setContentsMargins(0, 0, 0, 0)
-        params_layout.setSpacing(2)
-
-        p_row = QHBoxLayout()
-        p_row.setSpacing(4)
-        p_row.addWidget(QLabel("Params"))
-        p_row.addStretch()
-        add_param_btn = QPushButton("+")
-        add_param_btn.setFixedSize(22, 22)
-        add_param_btn.setStyleSheet(BTN_STYLE)
-        add_param_btn.clicked.connect(lambda: self._add_param_row())
-        p_row.addWidget(add_param_btn)
-        params_layout.addLayout(p_row)
+        p_hdr_row = QHBoxLayout()
+        p_hdr_row.setSpacing(4)
+        p_label = QLabel("Query Params")
+        p_label.setStyleSheet(f"color: {C['text2']}; font-size: 12px; background: transparent;")
+        p_hdr_row.addWidget(p_label)
+        p_hdr_row.addStretch()
+        self._add_param_btn = QPushButton("+")
+        self._add_param_btn.setFixedSize(24, 24)
+        self._add_param_btn.clicked.connect(lambda: self._add_param_row())
+        p_hdr_row.addWidget(self._add_param_btn)
+        card_layout.addLayout(p_hdr_row)
 
         self.params_container = QVBoxLayout()
         self.params_container.setSpacing(2)
-        params_layout.addLayout(self.params_container)
-        glayout.addWidget(params_widget, 3, 0, 1, 6)
+        self.params_container.setContentsMargins(0, 0, 0, 0)
+        card_layout.addLayout(self.params_container)
 
         # Body
+        body_lbl = QLabel("Request Body")
+        body_lbl.setStyleSheet(f"color: {C['text2']}; font-size: 12px; background: transparent;")
+        self._body_label = body_lbl
+        card_layout.addWidget(body_lbl)
         self.body_input = QPlainTextEdit()
         self.body_input.setPlaceholderText(
             '{"title": "foo", "body": "bar", "userId": {{id}} }'
         )
-        self.body_input.setMaximumHeight(60)
+        self.body_input.setMaximumHeight(64)
         self.body_input.setVisible(False)
-        glayout.addWidget(self.body_input, 4, 0, 1, 6)
+        body_lbl.setVisible(False)
+        card_layout.addWidget(self.body_input)
 
         self.method_combo.currentTextChanged.connect(self._on_method_changed)
-        layout.addWidget(group)
+        root.addWidget(card)
 
         self._add_header_row("Content-Type", "application/json")
         self._add_header_row("Accept", "application/json")
 
     def _on_method_changed(self, method: str):
-        self.body_input.setVisible(method in ("POST", "PUT", "PATCH"))
+        vis = method in ("POST", "PUT", "PATCH")
+        self.body_input.setVisible(vis)
+        self._body_label.setVisible(vis)
 
     def _on_auth_changed(self, auth_type: str):
+        has_auth = auth_type != "None"
+        self._auth_row_widget.setVisible(has_auth)
         for w in sum(self._auth_widgets.values(), []):
             w.setVisible(False)
         for w in self._auth_widgets.get(auth_type, []):
@@ -430,6 +463,7 @@ class ApiFormWidget(QWidget):
         self, rows: list[dict], container: QVBoxLayout
     ) -> dict:
         row_widget = QWidget()
+        row_widget.setStyleSheet("background: transparent;")
         row_layout = QHBoxLayout(row_widget)
         row_layout.setContentsMargins(0, 0, 0, 0)
         row_layout.setSpacing(4)
@@ -441,9 +475,8 @@ class ApiFormWidget(QWidget):
         key_input.setFixedWidth(140)
         value_input = QLineEdit()
         value_input.setPlaceholderText("Value")
-        remove_btn = QPushButton("\u2715")
-        remove_btn.setFixedSize(22, 22)
-        remove_btn.setStyleSheet(BTN_DANGER)
+        remove_btn = QPushButton("\u00d7")
+        remove_btn.setFixedSize(24, 24)
 
         row_data = {
             "widget": row_widget,
@@ -452,7 +485,6 @@ class ApiFormWidget(QWidget):
             "value": value_input,
         }
         rows.append(row_data)
-
         remove_btn.clicked.connect(lambda: self._remove_row(rows, row_widget))
 
         row_layout.addWidget(enabled_cb)
@@ -537,13 +569,14 @@ class FieldMappingDialog(QWidget):
     def __init__(self, mappings: list[dict], missing: list[dict], extra: list[dict]):
         super().__init__()
         self.setWindowTitle("Field Mappings")
-        self.setMinimumSize(500, 300)
+        self.setMinimumSize(520, 340)
 
         layout = QVBoxLayout(self)
-        layout.setSpacing(6)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(12)
 
         title = QLabel("Map old API field paths to new API field paths")
-        title.setStyleSheet("font-size: 13px; font-weight: bold;")
+        title.setStyleSheet(f"font-size: 14px; font-weight: 600; color: {C['text']};")
         layout.addWidget(title)
 
         self.rows: list[dict] = []
@@ -567,43 +600,44 @@ class FieldMappingDialog(QWidget):
 
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
+        self.scroll.setStyleSheet(f"background: {C['bg']}; border: none;")
         scroll_content = QWidget()
+        scroll_content.setStyleSheet("background: transparent;")
         self.scroll_layout = QVBoxLayout(scroll_content)
-        self.scroll_layout.setSpacing(2)
+        self.scroll_layout.setSpacing(4)
         self.scroll.setWidget(scroll_content)
-        layout.addWidget(self.scroll)
+        layout.addWidget(self.scroll, 1)
 
         add_btn = QPushButton("+ Add mapping")
-        add_btn.setStyleSheet(BTN_STYLE)
         add_btn.clicked.connect(lambda: self._add_row("", ""))
         layout.addWidget(add_btn)
 
         btn_row = QHBoxLayout()
+        btn_row.addStretch()
         cancel_btn = QPushButton("Cancel")
-        cancel_btn.setStyleSheet(BTN_STYLE)
         cancel_btn.clicked.connect(self.close)
         apply_btn = QPushButton("Apply & Re-run")
-        apply_btn.setStyleSheet(BTN_PRIMARY)
+        apply_btn.setProperty("accent", True)
         apply_btn.clicked.connect(self._on_apply)
-        btn_row.addStretch()
         btn_row.addWidget(cancel_btn)
         btn_row.addWidget(apply_btn)
         layout.addLayout(btn_row)
 
     def _add_row(self, old_path: str = "", new_path: str = ""):
         row_widget = QWidget()
+        row_widget.setStyleSheet("background: transparent;")
         row_layout = QHBoxLayout(row_widget)
         row_layout.setContentsMargins(0, 0, 0, 0)
-        row_layout.setSpacing(4)
+        row_layout.setSpacing(6)
 
         old_input = QLineEdit(old_path)
         old_input.setPlaceholderText("old.field.path")
         arrow = QLabel("\u2192")
+        arrow.setStyleSheet(f"color: {C['text3']}; background: transparent; font-size: 14px;")
         new_input = QLineEdit(new_path)
         new_input.setPlaceholderText("new.field.path")
-        remove_btn = QPushButton("\u2715")
-        remove_btn.setFixedSize(22, 22)
-        remove_btn.setStyleSheet(BTN_DANGER)
+        remove_btn = QPushButton("\u00d7")
+        remove_btn.setFixedSize(24, 24)
 
         row_data = {"widget": row_widget, "oldPath": old_input, "newPath": new_input}
         self.rows.append(row_data)
@@ -643,106 +677,112 @@ class ResultCard(QWidget):
         self._build_ui()
 
     def _build_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(6, 4, 6, 4)
-        layout.setSpacing(0)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        card = Card()
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(12, 10, 12, 10)
+        card_layout.setSpacing(6)
 
         r = self._result
         error = r.get("error")
         has_diff = bool(r.get("missing") or r.get("extra") or r.get("typeChanges"))
 
-        # Header
+        # Header row
         header = QHBoxLayout()
-        header.setSpacing(6)
+        header.setSpacing(8)
+
         id_label = QLabel(f"ID: {r.get('id', '?')}")
-        id_label.setStyleSheet("font-size: 12px; font-weight: bold;")
+        id_label.setStyleSheet(f"font-size: 13px; font-weight: 600; color: {C['text']}; background: transparent;")
         header.addWidget(id_label)
 
         # Response time
         rt = r.get("responseTimes", {})
         if rt:
             if "old" in rt and "new" in rt:
-                rt_text = f"\u23f1 {rt['old']:.3f}s \u2192 {rt['new']:.3f}s"
+                rt_text = f"{rt['old']:.3f}s \u2192 {rt['new']:.3f}s"
             else:
-                rt_text = f"\u23f1 {rt.get('single', 0):.3f}s"
+                rt_text = f"{rt.get('single', 0):.3f}s"
             rt_badge = QLabel(rt_text)
             rt_badge.setStyleSheet(
-                "background: #172554; color: #93c5fd; padding: 1px 6px; border-radius: 3px; font-size: 10px;"
+                f"background: {C['blue_bg']}; color: {C['accent']}; padding: 2px 8px; border-radius: 4px; font-size: 11px;"
             )
             header.addWidget(rt_badge)
 
         # Status code
         sc = r.get("statusCodes", {})
         if sc:
-            if "old" in sc and "old" in sc:
+            if "old" in sc and "new" in sc:
                 if r.get("statusCodeDiff"):
                     sc_text = f"{sc['old']} \u2192 {sc['new']}"
-                    sc_style = "background: #7f1d1d; color: #fca5a5;"
+                    sc_style = f"background: {C['red_bg']}; color: {C['red']};"
                 else:
                     sc_text = f"{sc['old']}"
-                    sc_style = "background: #064e3b; color: #6ee7b7;"
+                    sc_style = f"background: {C['green_bg']}; color: {C['green']};"
             else:
                 sc_text = f"{sc.get('single', '?')}"
-                sc_style = "background: #064e3b; color: #6ee7b7;"
+                sc_style = f"background: {C['green_bg']}; color: {C['green']};"
             sc_badge = QLabel(sc_text)
             sc_badge.setStyleSheet(
-                f"{sc_style} padding: 1px 6px; border-radius: 3px; font-size: 10px;"
+                f"{sc_style} padding: 2px 8px; border-radius: 4px; font-size: 11px;"
             )
             header.addWidget(sc_badge)
 
         if error:
             badge = QLabel("Error")
             badge.setStyleSheet(
-                "background: #7f1d1d; color: #fca5a5; padding: 1px 6px; border-radius: 3px; font-size: 10px;"
+                f"background: {C['red_bg']}; color: {C['red']}; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;"
             )
         elif has_diff:
-            badge = QLabel(
-                f"{len(r.get('missing', []))}M {len(r.get('extra', []))}E {len(r.get('typeChanges', []))}T"
-            )
+            m, e, t = len(r.get("missing", [])), len(r.get("extra", [])), len(r.get("typeChanges", []))
+            badge = QLabel(f"{m} missing \u00b7 {e} extra \u00b7 {t} changed")
             badge.setStyleSheet(
-                "background: #78350f; color: #fcd34d; padding: 1px 6px; border-radius: 3px; font-size: 10px;"
+                f"background: {C['yellow_bg']}; color: {C['yellow']}; padding: 2px 8px; border-radius: 4px; font-size: 11px;"
             )
         else:
-            badge = QLabel("OK")
+            badge = QLabel("Identical")
             badge.setStyleSheet(
-                "background: #064e3b; color: #6ee7b7; padding: 1px 6px; border-radius: 3px; font-size: 10px;"
+                f"background: {C['green_bg']}; color: {C['green']}; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;"
             )
         header.addWidget(badge)
         header.addStretch()
 
         self._toggle_btn = QPushButton("\u25b6")
-        self._toggle_btn.setFixedSize(20, 20)
-        self._toggle_btn.setStyleSheet(BTN_STYLE)
+        self._toggle_btn.setFixedSize(24, 24)
+        self._toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._toggle_btn.clicked.connect(self._toggle)
         header.addWidget(self._toggle_btn)
-        layout.addLayout(header)
+        card_layout.addLayout(header)
 
         # Body
         self._body = QWidget()
         self._body.setVisible(False)
+        self._body.setStyleSheet("background: transparent;")
         body_layout = QVBoxLayout(self._body)
-        body_layout.setContentsMargins(4, 4, 4, 4)
-        body_layout.setSpacing(2)
+        body_layout.setContentsMargins(0, 4, 0, 0)
+        body_layout.setSpacing(4)
 
         if error:
             err_label = QLabel(error)
             err_label.setWordWrap(True)
             err_label.setStyleSheet(
-                "color: #fca5a5; padding: 6px; background: #7f1d1d; border-radius: 4px; font-size: 11px;"
+                f"color: {C['red']}; padding: 10px; background: {C['red_bg']}; border: 1px solid {C['red']}33; border-radius: 6px; font-size: 12px;"
             )
             body_layout.addWidget(err_label)
         else:
             if r.get("missing"):
-                lbl = QLabel("Missing")
-                lbl.setStyleSheet("font-weight: bold; font-size: 11px; color: #fca5a5;")
+                lbl = QLabel("Missing Fields")
+                lbl.setStyleSheet(f"font-weight: 600; font-size: 12px; color: {C['red']}; background: transparent;")
                 body_layout.addWidget(lbl)
                 for item in r["missing"]:
                     body_layout.addWidget(
                         QLabel(f"  {item['path']} \u2192 {json.dumps(item.get('value'))}")
                     )
             if r.get("extra"):
-                lbl = QLabel("Extra")
-                lbl.setStyleSheet("font-weight: bold; font-size: 11px; color: #fcd34d;")
+                lbl = QLabel("Extra Fields")
+                lbl.setStyleSheet(f"font-weight: 600; font-size: 12px; color: {C['yellow']}; background: transparent;")
                 body_layout.addWidget(lbl)
                 for item in r["extra"]:
                     body_layout.addWidget(
@@ -750,7 +790,7 @@ class ResultCard(QWidget):
                     )
             if r.get("typeChanges"):
                 lbl = QLabel("Type Changes")
-                lbl.setStyleSheet("font-weight: bold; font-size: 11px; color: #93c5fd;")
+                lbl.setStyleSheet(f"font-weight: 600; font-size: 12px; color: {C['accent']}; background: transparent;")
                 body_layout.addWidget(lbl)
                 for item in r["typeChanges"]:
                     body_layout.addWidget(
@@ -759,12 +799,8 @@ class ResultCard(QWidget):
                         )
                     )
 
-        layout.addWidget(self._body)
-
-        border = "#7f1d1d" if error else ("#78350f" if has_diff else "#1e293b")
-        self.setStyleSheet(
-            f"ResultCard {{ border: 1px solid {border}; border-radius: 6px; margin: 2px 0; background: #0f172a; }}"
-        )
+        card_layout.addWidget(self._body)
+        outer.addWidget(card)
 
     def _toggle(self):
         self._expanded = not self._expanded
@@ -781,7 +817,7 @@ class DiffiWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Diffi \u2014 API Comparator")
-        self.setMinimumSize(900, 700)
+        self.setMinimumSize(960, 720)
 
         self._mode = "compare"
         self._results: list[dict] | None = None
@@ -799,128 +835,217 @@ class DiffiWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _apply_styles(self):
-        self.setStyleSheet("""
-            QMainWindow { background-color: #0f172a; }
-            QWidget { color: #e2e8f0; font-size: 12px; }
-            QLabel { color: #e2e8f0; background: transparent; }
-            QLineEdit, QPlainTextEdit, QTextEdit {
-                background-color: #1e293b;
-                color: #e2e8f0;
-                border: 1px solid #334155;
+        self.setStyleSheet(f"""
+            QMainWindow, QWidget#central {{
+                background: {C['bg']};
+            }}
+            QWidget {{
+                color: {C['text']};
+                font-size: 13px;
+            }}
+            QLabel {{
+                color: {C['text']};
+                background: transparent;
+            }}
+            QLineEdit {{
+                background: {C['bg']};
+                color: {C['text']};
+                border: 1px solid {C['border']};
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 13px;
+                selection-background-color: {C['accent2']};
+            }}
+            QLineEdit:focus {{
+                border-color: {C['accent']};
+            }}
+            QPlainTextEdit {{
+                background: {C['bg']};
+                color: {C['text']};
+                border: 1px solid {C['border']};
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 13px;
+                font-family: monospace;
+            }}
+            QPlainTextEdit:focus {{
+                border-color: {C['accent']};
+            }}
+            QComboBox {{
+                background: {C['bg']};
+                color: {C['text']};
+                border: 1px solid {C['border']};
+                border-radius: 6px;
+                padding: 5px 8px;
+                font-size: 13px;
+            }}
+            QComboBox:focus, QComboBox:on {{
+                border-color: {C['accent']};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 20px;
+            }}
+            QComboBox QAbstractItemView {{
+                background: {C['surface']};
+                color: {C['text']};
+                border: 1px solid {C['border']};
+                border-radius: 6px;
+                padding: 4px;
+                selection-background-color: {C['accent2']};
+            }}
+            QPushButton {{
+                background: {C['surface']};
+                color: {C['text']};
+                border: 1px solid {C['border']};
+                border-radius: 6px;
+                padding: 6px 14px;
+                font-size: 13px;
+            }}
+            QPushButton:hover {{
+                background: {C['surface2']};
+                border-color: {C['text3']};
+            }}
+            QPushButton:pressed {{
+                background: {C['border2']};
+            }}
+            QPushButton:disabled {{
+                color: {C['text3']};
+                background: {C['surface']};
+            }}
+            QPushButton[accent="true"] {{
+                background: {C['accent2']};
+                color: white;
+                border: 1px solid {C['accent']};
+            }}
+            QPushButton[accent="true"]:hover {{
+                background: {C['accent']};
+            }}
+            QPushButton[destructive="true"] {{
+                background: transparent;
+                color: {C['text3']};
+                border: 1px solid transparent;
+            }}
+            QPushButton[destructive="true"]:hover {{
+                color: {C['red']};
+                background: {C['red_bg']};
+                border-color: {C['red']}44;
+            }}
+            QCheckBox {{
+                color: {C['text']};
+                spacing: 6px;
+                font-size: 13px;
+            }}
+            QCheckBox::indicator {{
+                width: 16px; height: 16px;
+                border: 1px solid {C['border']};
                 border-radius: 4px;
-                padding: 3px 6px;
-                font-size: 12px;
-            }
-            QLineEdit:focus, QPlainTextEdit:focus {
-                border: 1px solid #3b82f6;
-            }
-            QComboBox {
-                background-color: #1e293b;
-                color: #e2e8f0;
-                border: 1px solid #334155;
-                border-radius: 4px;
-                padding: 3px 6px;
-                font-size: 12px;
-            }
-            QComboBox::drop-down { border: none; width: 16px; }
-            QComboBox QAbstractItemView {
-                background-color: #1e293b;
-                color: #e2e8f0;
-                selection-background-color: #334155;
-                border: 1px solid #334155;
-            }
-            QPushButton {
-                background-color: #1e293b;
-                color: #e2e8f0;
-                border: 1px solid #334155;
-                border-radius: 4px;
-                padding: 4px 10px;
-                font-size: 12px;
-            }
-            QPushButton:hover { background-color: #334155; border-color: #475569; }
-            QPushButton:pressed { background-color: #475569; }
-            QCheckBox { color: #e2e8f0; spacing: 4px; }
-            QCheckBox::indicator {
-                width: 14px; height: 14px;
-                border: 1px solid #475569;
-                border-radius: 3px;
-                background: #1e293b;
-            }
-            QCheckBox::indicator:checked { background: #059669; border-color: #059669; }
-            QSpinBox {
-                background-color: #1e293b;
-                color: #e2e8f0;
-                border: 1px solid #334155;
-                border-radius: 4px;
-                padding: 3px 6px;
-                font-size: 12px;
-            }
-            QScrollBar:vertical {
-                background-color: #0f172a;
+                background: {C['bg']};
+            }}
+            QCheckBox::indicator:checked {{
+                background: {C['accent2']};
+                border-color: {C['accent']};
+            }}
+            QSpinBox {{
+                background: {C['bg']};
+                color: {C['text']};
+                border: 1px solid {C['border']};
+                border-radius: 6px;
+                padding: 4px 6px;
+                font-size: 13px;
+            }}
+            QSpinBox:focus {{
+                border-color: {C['accent']};
+            }}
+            QScrollBar:vertical {{
+                background: transparent;
                 width: 8px;
                 margin: 0;
-            }
-            QScrollBar::handle:vertical {
-                background-color: #334155;
+            }}
+            QScrollBar::handle:vertical {{
+                background: {C['border']};
                 border-radius: 4px;
                 min-height: 24px;
-            }
-            QScrollBar::handle:vertical:hover { background-color: #475569; }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
-            QTabWidget::pane { border: 1px solid #2d3748; border-radius: 6px; background: transparent; top: -1px; }
-            QTabBar::tab {
-                background: #1e293b;
-                color: #94a3b8;
-                padding: 5px 14px;
-                border: 1px solid #2d3748;
+            }}
+            QScrollBar::handle:vertical:hover {{
+                background: {C['text3']};
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0;
+            }}
+            QTabWidget::pane {{
+                border: 1px solid {C['border']};
+                border-radius: 8px;
+                background: {C['surface']};
+                top: -1px;
+            }}
+            QTabBar::tab {{
+                background: {C['surface2']};
+                color: {C['text2']};
+                padding: 7px 18px;
+                border: 1px solid {C['border']};
                 border-bottom: none;
-                border-top-left-radius: 4px;
-                border-top-right-radius: 4px;
-                margin-right: 1px;
-                font-size: 11px;
-            }
-            QTabBar::tab:selected { background: #334155; color: #e2e8f0; border-color: #334155; }
-            QTabBar::tab:hover:!selected { background: #2d3748; }
-            QGroupBox {
-                color: #e2e8f0;
-                border: 1px solid #2d3748;
-                border-radius: 6px;
-                margin-top: 6px;
-                padding-top: 14px;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+                margin-right: 2px;
                 font-size: 12px;
-            }
-            QGroupBox::title { subcontrol-origin: margin; left: 10px; color: #94a3b8; }
-            QProgressBar {
-                border: 1px solid #334155;
+            }}
+            QTabBar::tab:selected {{
+                background: {C['surface']};
+                color: {C['text']};
+                border-color: {C['border']};
+            }}
+            QTabBar::tab:hover:!selected {{
+                background: {C['border2']};
+            }}
+            QProgressBar {{
+                border: 1px solid {C['border']};
                 border-radius: 4px;
                 text-align: center;
-                color: #e2e8f0;
-                background-color: #1e293b;
-                max-height: 16px;
-            }
-            QProgressBar::chunk {
-                background-color: #059669;
+                color: {C['text']};
+                background: {C['bg']};
+                max-height: 14px;
+                font-size: 11px;
+            }}
+            QProgressBar::chunk {{
+                background: {C['accent']};
                 border-radius: 3px;
-            }
-            QDockWidget { color: #e2e8f0; }
-            QDockWidget::title {
-                background: #1e293b;
-                padding: 4px 8px;
-                font-weight: bold;
-                font-size: 11px;
-                border-bottom: 1px solid #2d3748;
-            }
-            QListWidget {
-                background-color: #020617;
-                color: #e2e8f0;
-                border: 1px solid #2d3748;
-                border-radius: 4px;
-                font-size: 11px;
-            }
-            QListWidget::item { padding: 4px 6px; }
-            QListWidget::item:selected { background-color: #334155; }
-            QListWidget::item:hover { background-color: #1e293b; }
-            QSplitter::handle { background: #2d3748; height: 2px; }
+            }}
+            QDockWidget {{
+                color: {C['text']};
+                titlebar-close-icon: none;
+                titlebar-normal-icon: none;
+            }}
+            QDockWidget::title {{
+                background: {C['surface']};
+                padding: 8px 12px;
+                font-weight: 600;
+                font-size: 12px;
+                border-bottom: 1px solid {C['border']};
+            }}
+            QListWidget {{
+                background: {C['bg']};
+                color: {C['text']};
+                border: 1px solid {C['border']};
+                border-radius: 6px;
+                font-size: 12px;
+                outline: none;
+            }}
+            QListWidget::item {{
+                padding: 6px 8px;
+                border-bottom: 1px solid {C['border2']};
+            }}
+            QListWidget::item:selected {{
+                background: {C['accent2']};
+                color: white;
+            }}
+            QListWidget::item:hover:!selected {{
+                background: {C['surface2']};
+            }}
+            QSplitter::handle {{
+                background: {C['border']};
+                height: 1px;
+            }}
         """)
 
     # ------------------------------------------------------------------
@@ -929,92 +1054,120 @@ class DiffiWindow(QMainWindow):
 
     def _build_ui(self):
         central = QWidget()
+        central.setObjectName("central")
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
-        layout.setSpacing(6)
-        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setContentsMargins(20, 16, 20, 16)
+        layout.setSpacing(16)
 
-        # --- Top bar: title + mode toggle + env profile ---
-        top_bar = QHBoxLayout()
-        top_bar.setSpacing(8)
+        # --- Header ---
+        header_row = QHBoxLayout()
+        header_row.setSpacing(12)
 
         title = QLabel("Diffi")
-        title.setStyleSheet("font-size: 18px; font-weight: bold; color: #f8fafc;")
-        top_bar.addWidget(title)
+        title.setStyleSheet(
+            f"font-size: 22px; font-weight: 700; color: {C['text']}; letter-spacing: -0.5px;"
+        )
+        header_row.addWidget(title)
 
-        # Mode toggle
-        self._mode_compare_btn = QPushButton("Compare")
+        subtitle = QLabel("\u2014 API Comparator")
+        subtitle.setStyleSheet(
+            f"font-size: 14px; color: {C['text2']}; font-weight: 400;"
+        )
+        header_row.addWidget(subtitle)
+        header_row.addStretch()
+
+        # Config buttons
+        import_btn = QPushButton("Import Config")
+        import_btn.clicked.connect(self._on_import_config)
+        header_row.addWidget(import_btn)
+
+        export_cfg_btn = QPushButton("Export Config")
+        export_cfg_btn.clicked.connect(self._on_export_config)
+        header_row.addWidget(export_cfg_btn)
+
+        header_row.addSpacing(8)
+
+        # Environment
+        env_lbl = QLabel("Environment")
+        env_lbl.setStyleSheet(f"font-size: 12px; color: {C['text2']};")
+        header_row.addWidget(env_lbl)
+        self._profile_combo = QComboBox()
+        self._profile_combo.setFixedWidth(130)
+        self._profile_combo.currentTextChanged.connect(self._on_profile_selected)
+        header_row.addWidget(self._profile_combo)
+
+        save_profile_btn = QPushButton("\u2714")
+        save_profile_btn.setFixedSize(30, 30)
+        save_profile_btn.setToolTip("Save profile")
+        save_profile_btn.clicked.connect(self._on_save_profile)
+        header_row.addWidget(save_profile_btn)
+
+        del_profile_btn = QPushButton("\u00d7")
+        del_profile_btn.setFixedSize(30, 30)
+        del_profile_btn.setProperty("destructive", True)
+        del_profile_btn.setToolTip("Delete profile")
+        del_profile_btn.clicked.connect(self._on_delete_profile)
+        header_row.addWidget(del_profile_btn)
+
+        layout.addLayout(header_row)
+
+        # --- Mode toggle (segmented) ---
+        mode_row = QHBoxLayout()
+        mode_row.setSpacing(0)
+
+        self._mode_compare_btn = QPushButton("Compare (Old vs New)")
         self._mode_compare_btn.setCheckable(True)
         self._mode_compare_btn.setChecked(True)
-        self._mode_compare_btn.setFixedWidth(72)
-        self._mode_compare_btn.setStyleSheet("""
-            QPushButton { font-size: 11px; padding: 3px 8px; }
-            QPushButton:checked { background: #3b82f6; color: white; border-color: #3b82f6; }
+        self._mode_compare_btn.setStyleSheet(f"""
+            QPushButton {{
+                padding: 8px 20px;
+                font-size: 13px;
+                font-weight: 500;
+                border-radius: 8px 0 0 8px;
+                border-right: none;
+            }}
+            QPushButton:checked {{
+                background: {C['accent2']};
+                color: white;
+                border-color: {C['accent']};
+            }}
         """)
         self._mode_compare_btn.clicked.connect(lambda: self._set_mode("compare"))
 
-        self._mode_single_btn = QPushButton("Single")
+        self._mode_single_btn = QPushButton("Single API")
         self._mode_single_btn.setCheckable(True)
-        self._mode_single_btn.setFixedWidth(60)
-        self._mode_single_btn.setStyleSheet("""
-            QPushButton { font-size: 11px; padding: 3px 8px; }
-            QPushButton:checked { background: #3b82f6; color: white; border-color: #3b82f6; }
+        self._mode_single_btn.setStyleSheet(f"""
+            QPushButton {{
+                padding: 8px 20px;
+                font-size: 13px;
+                font-weight: 500;
+                border-radius: 0 8px 8px 0;
+            }}
+            QPushButton:checked {{
+                background: {C['accent2']};
+                color: white;
+                border-color: {C['accent']};
+            }}
         """)
         self._mode_single_btn.clicked.connect(lambda: self._set_mode("single"))
 
-        top_bar.addWidget(self._mode_compare_btn)
-        top_bar.addWidget(self._mode_single_btn)
-        top_bar.addSpacing(12)
+        mode_row.addWidget(self._mode_compare_btn)
+        mode_row.addWidget(self._mode_single_btn)
+        mode_row.addStretch()
+        layout.addLayout(mode_row)
 
-        # Config buttons
-        import_btn = QPushButton("\u21e7 Config")
-        import_btn.setStyleSheet(BTN_STYLE)
-        import_btn.setToolTip("Import configuration")
-        import_btn.clicked.connect(self._on_import_config)
-        top_bar.addWidget(import_btn)
-
-        export_cfg_btn = QPushButton("\u21e9 Config")
-        export_cfg_btn.setStyleSheet(BTN_STYLE)
-        export_cfg_btn.setToolTip("Export configuration")
-        export_cfg_btn.clicked.connect(self._on_export_config)
-        top_bar.addWidget(export_cfg_btn)
-
-        top_bar.addStretch()
-
-        # Environment
-        top_bar.addWidget(QLabel("Env:"))
-        self._profile_combo = QComboBox()
-        self._profile_combo.setFixedWidth(120)
-        self._profile_combo.currentTextChanged.connect(self._on_profile_selected)
-        top_bar.addWidget(self._profile_combo)
-
-        save_profile_btn = QPushButton("\u2714")
-        save_profile_btn.setFixedSize(24, 24)
-        save_profile_btn.setStyleSheet(BTN_STYLE)
-        save_profile_btn.setToolTip("Save profile")
-        save_profile_btn.clicked.connect(self._on_save_profile)
-        top_bar.addWidget(save_profile_btn)
-
-        del_profile_btn = QPushButton("\u2715")
-        del_profile_btn.setFixedSize(24, 24)
-        del_profile_btn.setStyleSheet(BTN_DANGER)
-        del_profile_btn.setToolTip("Delete profile")
-        del_profile_btn.clicked.connect(self._on_delete_profile)
-        top_bar.addWidget(del_profile_btn)
-
-        layout.addLayout(top_bar)
-
-        # --- Content area ---
+        # --- Content ---
         content_splitter = QSplitter(Qt.Orientation.Vertical)
 
         # Top: API config
         config_widget = QWidget()
+        config_widget.setStyleSheet("background: transparent;")
         config_layout = QVBoxLayout(config_widget)
         config_layout.setContentsMargins(0, 0, 0, 0)
-        config_layout.setSpacing(4)
+        config_layout.setSpacing(12)
 
         self._api_tabs = QTabWidget()
-        self._api_tabs.setStyleSheet("QTabWidget::pane { padding: 4px; }")
         self._old_form = ApiFormWidget("Old API")
         self._new_form = ApiFormWidget("New API")
         self._single_form = ApiFormWidget("API")
@@ -1023,51 +1176,80 @@ class DiffiWindow(QMainWindow):
         self._api_tabs.addTab(self._new_form, "New API")
         config_layout.addWidget(self._api_tabs)
 
-        # IDs row
+        # IDs + options card
+        ids_card = Card()
+        ids_card_layout = QVBoxLayout(ids_card)
+        ids_card_layout.setContentsMargins(16, 12, 16, 12)
+        ids_card_layout.setSpacing(8)
+
+        # Row 1: IDs input
         ids_row = QHBoxLayout()
-        ids_row.setSpacing(6)
-        ids_row.addWidget(QLabel("IDs"))
+        ids_row.setSpacing(8)
+        ids_lbl = QLabel("IDs")
+        ids_lbl.setFixedWidth(24)
+        ids_lbl.setStyleSheet(f"color: {C['text2']}; font-size: 12px;")
         self._ids_input = QLineEdit()
-        self._ids_input.setPlaceholderText("1, 2, 3, 5, 10")
+        self._ids_input.setPlaceholderText("e.g. 1, 2, 3, 5, 10")
+        ids_row.addWidget(ids_lbl)
         ids_row.addWidget(self._ids_input, 1)
 
-        import_ids_btn = QPushButton("\u21e7 Import")
-        import_ids_btn.setStyleSheet(BTN_STYLE)
-        import_ids_btn.setToolTip("Import IDs from file")
+        import_ids_btn = QPushButton("Import File")
         import_ids_btn.clicked.connect(self._on_import_ids)
         ids_row.addWidget(import_ids_btn)
 
-        ids_row.addWidget(QLabel("Threads"))
+        ids_card_layout.addLayout(ids_row)
+
+        # Row 2: Options
+        opts_row = QHBoxLayout()
+        opts_row.setSpacing(16)
+
+        conc_lbl = QLabel("Threads")
+        conc_lbl.setStyleSheet(f"color: {C['text2']}; font-size: 12px;")
         self._concurrency_spin = QSpinBox()
         self._concurrency_spin.setRange(1, 20)
         self._concurrency_spin.setValue(1)
-        self._concurrency_spin.setFixedWidth(44)
-        ids_row.addWidget(self._concurrency_spin)
+        self._concurrency_spin.setFixedWidth(52)
+        opts_row.addWidget(conc_lbl)
+        opts_row.addWidget(self._concurrency_spin)
 
-        ids_row.addSpacing(8)
-
-        ids_row.addWidget(QLabel("Ignore"))
+        ignore_lbl = QLabel("Ignore Fields")
+        ignore_lbl.setStyleSheet(f"color: {C['text2']}; font-size: 12px;")
         self._ignore_input = QLineEdit()
         self._ignore_input.setPlaceholderText("timestamp, request_id, user.created_at")
         self._ignore_input.setToolTip(
             "Comma-separated field paths to exclude from comparison.\n"
             "Supports prefixes: 'user' ignores 'user.name', 'user.email', etc."
         )
-        ids_row.addWidget(self._ignore_input, 1)
+        opts_row.addWidget(ignore_lbl)
+        opts_row.addWidget(self._ignore_input, 1)
 
-        config_layout.addLayout(ids_row)
+        ids_card_layout.addLayout(opts_row)
+        config_layout.addWidget(ids_card)
 
-        # Fetch button + progress
+        # Fetch button row
         fetch_row = QHBoxLayout()
-        fetch_row.setSpacing(6)
-        self._fetch_btn = QPushButton("\u25b6 Run")
-        self._fetch_btn.setStyleSheet(BTN_PRIMARY)
-        self._fetch_btn.setFixedWidth(80)
+        fetch_row.setSpacing(10)
+        self._fetch_btn = QPushButton("\u25b6  Run Comparison")
+        self._fetch_btn.setFixedHeight(38)
+        self._fetch_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {C['green']};
+                color: white;
+                font-weight: 600;
+                font-size: 14px;
+                padding: 0 28px;
+                border: none;
+                border-radius: 8px;
+            }}
+            QPushButton:hover {{ background: #2ea043; }}
+            QPushButton:disabled {{ background: {C['border2']}; color: {C['text3']}; }}
+        """)
         self._fetch_btn.clicked.connect(self._on_fetch)
         self._progress = QProgressBar()
         self._progress.setVisible(False)
         self._progress.setMaximum(0)
-        self._progress.setFixedWidth(120)
+        self._progress.setFixedWidth(140)
+        self._progress.setFixedHeight(38)
         fetch_row.addWidget(self._fetch_btn)
         fetch_row.addWidget(self._progress)
         fetch_row.addStretch()
@@ -1077,45 +1259,40 @@ class DiffiWindow(QMainWindow):
 
         # Bottom: Results
         results_widget = QWidget()
+        results_widget.setStyleSheet("background: transparent;")
         results_layout = QVBoxLayout(results_widget)
         results_layout.setContentsMargins(0, 0, 0, 0)
-        results_layout.setSpacing(4)
+        results_layout.setSpacing(8)
 
         results_header = QHBoxLayout()
-        results_header.setSpacing(6)
+        results_header.setSpacing(8)
         results_title = QLabel("Results")
-        results_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #94a3b8;")
+        results_title.setStyleSheet(
+            f"font-size: 16px; font-weight: 600; color: {C['text2']};"
+        )
         results_header.addWidget(results_title)
         results_header.addStretch()
 
-        self._mapping_btn = QPushButton("Mappings")
+        self._mapping_btn = QPushButton("Field Mappings")
         self._mapping_btn.setVisible(False)
-        self._mapping_btn.setStyleSheet(BTN_STYLE)
         self._mapping_btn.clicked.connect(self._on_configure_mappings)
         results_header.addWidget(self._mapping_btn)
 
         toggle_hist_btn = QPushButton("History")
-        toggle_hist_btn.setStyleSheet(BTN_STYLE)
         toggle_hist_btn.clicked.connect(
             lambda: self._history_dock.setVisible(not self._history_dock.isVisible())
         )
         results_header.addWidget(toggle_hist_btn)
 
-        export_json_btn = QPushButton("JSON")
-        export_json_btn.setStyleSheet(BTN_STYLE)
-        export_json_btn.setFixedWidth(44)
+        export_json_btn = QPushButton("Export JSON")
         export_json_btn.clicked.connect(lambda: self._on_export_results("json"))
         results_header.addWidget(export_json_btn)
 
-        export_csv_btn = QPushButton("CSV")
-        export_csv_btn.setStyleSheet(BTN_STYLE)
-        export_csv_btn.setFixedWidth(40)
+        export_csv_btn = QPushButton("Export CSV")
         export_csv_btn.clicked.connect(lambda: self._on_export_results("csv"))
         results_header.addWidget(export_csv_btn)
 
-        export_md_btn = QPushButton("MD")
-        export_md_btn.setStyleSheet(BTN_STYLE)
-        export_md_btn.setFixedWidth(36)
+        export_md_btn = QPushButton("Export MD")
         export_md_btn.clicked.connect(lambda: self._on_export_results("markdown"))
         results_header.addWidget(export_md_btn)
 
@@ -1123,16 +1300,18 @@ class DiffiWindow(QMainWindow):
         self._error_label.setWordWrap(True)
         self._error_label.setVisible(False)
         self._error_label.setStyleSheet(
-            "color: #fca5a5; padding: 6px; background: #7f1d1d; border-radius: 4px; font-size: 11px;"
+            f"color: {C['red']}; padding: 10px; background: {C['red_bg']}; border: 1px solid {C['red']}33; border-radius: 6px; font-size: 12px;"
         )
         results_layout.addWidget(self._error_label)
         results_layout.addLayout(results_header)
 
         self._results_scroll = QScrollArea()
         self._results_scroll.setWidgetResizable(True)
+        self._results_scroll.setStyleSheet(f"background: transparent; border: none;")
         self._results_content = QWidget()
+        self._results_content.setStyleSheet("background: transparent;")
         self._results_layout_inner = QVBoxLayout(self._results_content)
-        self._results_layout_inner.setSpacing(4)
+        self._results_layout_inner.setSpacing(8)
         self._results_scroll.setWidget(self._results_content)
         results_layout.addWidget(self._results_scroll)
 
@@ -1140,7 +1319,7 @@ class DiffiWindow(QMainWindow):
         content_splitter.setStretchFactor(0, 1)
         content_splitter.setStretchFactor(1, 2)
 
-        layout.addWidget(content_splitter)
+        layout.addWidget(content_splitter, 1)
 
         # History dock
         self._history_dock = QDockWidget("History", self)
@@ -1148,16 +1327,17 @@ class DiffiWindow(QMainWindow):
             Qt.DockWidgetArea.RightDockWidgetArea | Qt.DockWidgetArea.LeftDockWidgetArea
         )
         history_container = QWidget()
+        history_container.setStyleSheet(f"background: {C['surface']};")
         history_layout = QVBoxLayout(history_container)
-        history_layout.setContentsMargins(4, 4, 4, 4)
-        history_layout.setSpacing(4)
+        history_layout.setContentsMargins(8, 8, 8, 8)
+        history_layout.setSpacing(8)
 
         self._history_list = QListWidget()
         self._history_list.itemDoubleClicked.connect(self._on_history_selected)
-        history_layout.addWidget(self._history_list)
+        history_layout.addWidget(self._history_list, 1)
 
-        clear_hist_btn = QPushButton("Clear")
-        clear_hist_btn.setStyleSheet(BTN_DANGER)
+        clear_hist_btn = QPushButton("Clear History")
+        clear_hist_btn.setProperty("destructive", True)
         clear_hist_btn.clicked.connect(self._on_clear_history)
         history_layout.addWidget(clear_hist_btn)
 
@@ -1177,10 +1357,10 @@ class DiffiWindow(QMainWindow):
         if mode == "compare":
             self._api_tabs.addTab(self._old_form, "Old API")
             self._api_tabs.addTab(self._new_form, "New API")
-            self._fetch_btn.setText("\u25b6 Run")
+            self._fetch_btn.setText("\u25b6  Run Comparison")
         else:
             self._api_tabs.addTab(self._single_form, "API")
-            self._fetch_btn.setText("\u25b6 Fetch")
+            self._fetch_btn.setText("\u25b6  Fetch Data")
 
     # ------------------------------------------------------------------
     # Import / Export Config
@@ -1529,29 +1709,30 @@ class DiffiWindow(QMainWindow):
         has_changes = bool(all_missing or all_extra or all_type_changes)
 
         # Summary card
-        summary_group = QGroupBox("Summary")
-        summary_layout = QVBoxLayout(summary_group)
-        summary_layout.setSpacing(4)
+        summary_card = Card()
+        summary_layout = QVBoxLayout(summary_card)
+        summary_layout.setContentsMargins(16, 14, 16, 14)
+        summary_layout.setSpacing(10)
 
         stats_row = QHBoxLayout()
-        stats_row.setSpacing(16)
+        stats_row.setSpacing(24)
         stats = [
-            ("Total", str(total), "#f8fafc"),
-            ("OK", str(success), "#6ee7b7"),
-            ("Err", str(error_count), "#fca5a5"),
+            ("Total IDs", str(total), C["text"]),
+            ("Successful", str(success), C["green"]),
+            ("Errors", str(error_count), C["red"]),
             (
                 "Status",
-                "Changed" if has_changes else "Identical",
-                "#fcd34d" if has_changes else "#6ee7b7",
+                "Changes Detected" if has_changes else "All Identical",
+                C["yellow"] if has_changes else C["green"],
             ),
         ]
         for label, value, color in stats:
-            col = QHBoxLayout()
-            col.setSpacing(4)
+            col = QVBoxLayout()
+            col.setSpacing(0)
             val = QLabel(value)
-            val.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {color};")
+            val.setStyleSheet(f"font-size: 22px; font-weight: 700; color: {color}; background: transparent;")
             lbl = QLabel(label)
-            lbl.setStyleSheet("color: #64748b; font-size: 11px;")
+            lbl.setStyleSheet(f"color: {C['text2']}; font-size: 11px; background: transparent;")
             col.addWidget(val)
             col.addWidget(lbl)
             stats_row.addLayout(col)
@@ -1567,55 +1748,54 @@ class DiffiWindow(QMainWindow):
                 avg_old = sum(old_times) / len(old_times)
                 avg_new = sum(new_times) / len(new_times)
                 rt_label = QLabel(
-                    f"\u23f1 Avg: Old {avg_old:.3f}s | New {avg_new:.3f}s"
+                    f"Average Response Time  \u2014  Old: {avg_old:.3f}s    New: {avg_new:.3f}s"
                 )
-                rt_label.setStyleSheet("font-size: 11px; color: #94a3b8;")
+                rt_label.setStyleSheet(f"font-size: 12px; color: {C['text2']}; background: transparent;")
                 summary_layout.addWidget(rt_label)
 
         # Status code summary
         sc_results = [r for r in results if not r.get("error") and r.get("statusCodeDiff")]
         if sc_results:
             sc_label = QLabel(
-                f"\u26a0 {len(sc_results)} ID(s) have different status codes"
+                f"\u26a0  {len(sc_results)} ID(s) returned different status codes"
             )
-            sc_label.setStyleSheet("color: #fca5a5; font-weight: bold; font-size: 11px;")
+            sc_label.setStyleSheet(f"color: {C['red']}; font-weight: 600; font-size: 12px; background: transparent;")
             summary_layout.addWidget(sc_label)
 
         if has_changes and self._mode == "compare":
             map_btn = QPushButton(
-                f"Mappings ({len(self._field_mappings)})"
+                f"Configure Field Mappings ({len(self._field_mappings)})"
                 if self._field_mappings
-                else "Configure Mappings"
+                else "Configure Field Mappings"
             )
-            map_btn.setStyleSheet(BTN_STYLE)
             map_btn.clicked.connect(self._on_configure_mappings)
             summary_layout.addWidget(map_btn)
 
         if all_missing:
             lbl = QLabel(f"Missing Fields \u2014 {len(all_missing)}")
-            lbl.setStyleSheet("font-weight: bold; font-size: 11px; color: #fca5a5;")
+            lbl.setStyleSheet(f"font-weight: 600; font-size: 12px; color: {C['red']}; background: transparent; margin-top: 4px;")
             summary_layout.addWidget(lbl)
             for item in all_missing:
                 summary_layout.addWidget(
                     QLabel(
-                        f"  {item['path']} \u2192 {', '.join(str(i) for i in item['ids'])}"
+                        f"  {item['path']} \u2192 IDs: {', '.join(str(i) for i in item['ids'])}"
                     )
                 )
 
         if all_extra:
             lbl = QLabel(f"Extra Fields \u2014 {len(all_extra)}")
-            lbl.setStyleSheet("font-weight: bold; font-size: 11px; color: #fcd34d;")
+            lbl.setStyleSheet(f"font-weight: 600; font-size: 12px; color: {C['yellow']}; background: transparent; margin-top: 4px;")
             summary_layout.addWidget(lbl)
             for item in all_extra:
                 summary_layout.addWidget(
                     QLabel(
-                        f"  {item['path']} \u2192 {', '.join(str(i) for i in item['ids'])}"
+                        f"  {item['path']} \u2192 IDs: {', '.join(str(i) for i in item['ids'])}"
                     )
                 )
 
         if all_type_changes:
             lbl = QLabel(f"Type Changes \u2014 {len(all_type_changes)}")
-            lbl.setStyleSheet("font-weight: bold; font-size: 11px; color: #93c5fd;")
+            lbl.setStyleSheet(f"font-weight: 600; font-size: 12px; color: {C['accent']}; background: transparent; margin-top: 4px;")
             summary_layout.addWidget(lbl)
             for item in all_type_changes:
                 summary_layout.addWidget(
@@ -1624,39 +1804,41 @@ class DiffiWindow(QMainWindow):
                     )
                 )
 
-        self._results_layout_inner.addWidget(summary_group)
+        self._results_layout_inner.addWidget(summary_card)
 
         # Per-ID breakdown
-        per_id_group = QGroupBox("Per-ID Breakdown")
-        per_id_layout = QVBoxLayout(per_id_group)
-        per_id_layout.setSpacing(2)
+        per_id_label = QLabel("Per-ID Breakdown")
+        per_id_label.setStyleSheet(
+            f"font-size: 14px; font-weight: 600; color: {C['text2']}; background: transparent; margin-top: 8px;"
+        )
+        self._results_layout_inner.addWidget(per_id_label)
+
         for r in results:
             card = ResultCard(r)
-            per_id_layout.addWidget(card)
-        per_id_layout.addStretch()
-        self._results_layout_inner.addWidget(per_id_group)
+            self._results_layout_inner.addWidget(card)
 
         # Raw responses
         if results and not results[0].get("error"):
-            raw_group = QGroupBox("Raw Responses")
-            raw_layout = QVBoxLayout(raw_group)
-            raw_layout.setSpacing(4)
+            raw_label = QLabel("Raw Responses")
+            raw_label.setStyleSheet(
+                f"font-size: 14px; font-weight: 600; color: {C['text2']}; background: transparent; margin-top: 8px;"
+            )
+            self._results_layout_inner.addWidget(raw_label)
             for r in results:
                 id_label = QLabel(f"ID: {r.get('id', '?')}")
-                id_label.setStyleSheet("font-weight: bold; font-size: 11px;")
-                raw_layout.addWidget(id_label)
+                id_label.setStyleSheet(f"font-weight: 600; font-size: 12px; background: transparent;")
+                self._results_layout_inner.addWidget(id_label)
                 raw_text = QPlainTextEdit()
                 raw_text.setReadOnly(True)
-                raw_text.setMaximumHeight(120)
-                raw_text.setStyleSheet("font-size: 11px;")
+                raw_text.setMaximumHeight(140)
                 if self._mode == "compare":
                     display_data = r.get("rawNewData") or r.get("newData", {})
                     raw_text.setPlainText(json.dumps(display_data, indent=2))
-                    raw_layout.addWidget(raw_text)
                 else:
                     raw_text.setPlainText(json.dumps(r.get("data", {}), indent=2))
-                    raw_layout.addWidget(raw_text)
-            self._results_layout_inner.addWidget(raw_group)
+                self._results_layout_inner.addWidget(raw_text)
+
+        self._results_layout_inner.addStretch()
 
     def _show_error(self, msg: str):
         self._error_label.setText(msg)
@@ -1739,12 +1921,12 @@ class DiffiWindow(QMainWindow):
             ts = entry.get("timestamp", "?")
             try:
                 dt = datetime.fromisoformat(ts)
-                ts = dt.strftime("%m/%d %H:%M")
+                ts = dt.strftime("%b %d, %H:%M")
             except ValueError:
                 pass
             mode = entry.get("mode", "?")
             n_ids = len(entry.get("ids", []))
-            self._history_list.addItem(f"{ts} | {mode} | {n_ids} IDs")
+            self._history_list.addItem(f"{ts}  \u00b7  {mode}  \u00b7  {n_ids} IDs")
 
     def _on_history_selected(self, item: QListWidget.Item):
         row = self._history_list.row(item)
