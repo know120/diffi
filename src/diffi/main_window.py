@@ -661,6 +661,17 @@ class DiffiWindow(QMainWindow):
             QPushButton#greenBtn:hover { background: #c4eec2; }
             QPushButton#greenBtn:disabled { background: #313244; color: #585b70; }
 
+            QPushButton#iconBtn {
+                background: transparent;
+                color: #6c7086;
+                border: 1px solid transparent;
+                border-radius: 8px;
+                padding: 4px;
+                font-size: 16px;
+            }
+            QPushButton#iconBtn:hover { background: #313244; color: #cdd6f4; border-color: #45475a; }
+            QPushButton#iconBtn:pressed { background: #45475a; }
+
             QPushButton#linkBtn {
                 background: transparent;
                 color: #89b4fa;
@@ -687,13 +698,6 @@ class DiffiWindow(QMainWindow):
                 font-size: 12px;
             }
             QPushButton#toggleBtn:hover { color: #cdd6f4; }
-
-            QPushButton#segActive {
-                background: #313244;
-                color: #cdd6f4;
-                border: 1px solid #45475a;
-                font-weight: 500;
-            }
 
             QLabel#badgeGreen { background: #a6e3a122; color: #a6e3a1; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 500; }
             QLabel#badgeRed { background: #f38ba822; color: #f38ba8; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 500; }
@@ -757,8 +761,8 @@ class DiffiWindow(QMainWindow):
         s = QLabel("API Comparator"); s.setObjectName("appSub"); hdr.addWidget(s)
         hdr.addStretch()
 
-        ic = QPushButton("Import Config"); ic.clicked.connect(self._on_import_config); hdr.addWidget(ic)
-        ec = QPushButton("Export Config"); ec.clicked.connect(self._on_export_config); hdr.addWidget(ec)
+        ic = QPushButton("⬇"); ic.setObjectName("iconBtn"); ic.setFixedSize(34, 34); ic.setToolTip("Import Configuration"); ic.clicked.connect(self._on_import_config); hdr.addWidget(ic)
+        ec = QPushButton("⬆"); ec.setObjectName("iconBtn"); ec.setFixedSize(34, 34); ec.setToolTip("Export Configuration"); ec.clicked.connect(self._on_export_config); hdr.addWidget(ec)
         hdr.addSpacing(4)
         envl = QLabel("Environment"); envl.setObjectName("fieldLabel"); hdr.addWidget(envl)
         self._profile_combo = QComboBox(); self._profile_combo.setFixedWidth(130)
@@ -768,14 +772,13 @@ class DiffiWindow(QMainWindow):
         layout.addLayout(hdr)
         layout.addSpacing(20)
 
-        # -- Mode toggle --
-        mrow = QHBoxLayout(); mrow.setSpacing(4)
-        self._mc = QPushButton("Compare (Old vs New)"); self._mc.setCheckable(True); self._mc.setChecked(True)
-        self._mc.setObjectName("segActive"); self._mc.setFixedHeight(34)
-        self._mc.clicked.connect(lambda: self._set_mode("compare"))
-        self._ms = QPushButton("Single API"); self._ms.setCheckable(True); self._ms.setFixedHeight(34)
-        self._ms.clicked.connect(lambda: self._set_mode("single"))
-        mrow.addWidget(self._mc); mrow.addWidget(self._ms); mrow.addStretch()
+        # -- Mode dropdown --
+        mrow = QHBoxLayout(); mrow.setSpacing(8)
+        ml = QLabel("Mode"); ml.setObjectName("fieldLabel"); mrow.addWidget(ml)
+        self._mode_combo = QComboBox(); self._mode_combo.setFixedWidth(200); self._mode_combo.setFixedHeight(34)
+        self._mode_combo.addItems(["Compare (Old vs New)", "Single API"])
+        self._mode_combo.currentIndexChanged.connect(lambda i: self._set_mode("compare" if i == 0 else "single"))
+        mrow.addWidget(self._mode_combo); mrow.addStretch()
         layout.addLayout(mrow)
         layout.addSpacing(16)
 
@@ -800,7 +803,7 @@ class DiffiWindow(QMainWindow):
         r1 = QHBoxLayout(); r1.setSpacing(8)
         self._ids_input = QLineEdit(); self._ids_input.setPlaceholderText("e.g. 1, 2, 3, 5, 10")
         r1.addWidget(self._ids_input, 1)
-        imb = QPushButton("Import File"); imb.clicked.connect(self._on_import_ids); r1.addWidget(imb)
+        imb = QPushButton("⬇"); imb.setObjectName("iconBtn"); imb.setFixedSize(34, 34); imb.setToolTip("Import IDs from File"); imb.clicked.connect(self._on_import_ids); r1.addWidget(imb)
         il.addLayout(r1)
 
         r2 = QHBoxLayout(); r2.setSpacing(20)
@@ -834,10 +837,10 @@ class DiffiWindow(QMainWindow):
         rlbl = QHBoxLayout(); rlbl.setSpacing(8)
         rt = QLabel("Results"); rt.setObjectName("sectionTitle"); rlbl.addWidget(rt); rlbl.addStretch()
         self._mapping_btn = QPushButton("Field Mappings"); self._mapping_btn.setVisible(False); self._mapping_btn.clicked.connect(self._on_configure_mappings); rlbl.addWidget(self._mapping_btn)
-        hb = QPushButton("History"); hb.clicked.connect(lambda: self._history_dock.setVisible(not self._history_dock.isVisible())); rlbl.addWidget(hb)
-        ej = QPushButton("JSON"); ej.setFixedWidth(50); ej.clicked.connect(lambda: self._on_export_results("json")); rlbl.addWidget(ej)
-        ec2 = QPushButton("CSV"); ec2.setFixedWidth(46); ec2.clicked.connect(lambda: self._on_export_results("csv")); rlbl.addWidget(ec2)
-        em = QPushButton("MD"); em.setFixedWidth(42); em.clicked.connect(lambda: self._on_export_results("markdown")); rlbl.addWidget(em)
+        hb = QPushButton("↻"); hb.setObjectName("iconBtn"); hb.setFixedSize(34, 34); hb.setToolTip("Toggle History"); hb.clicked.connect(lambda: self._history_dock.setVisible(not self._history_dock.isVisible())); rlbl.addWidget(hb)
+        ej = QPushButton("{}"); ej.setObjectName("iconBtn"); ej.setFixedSize(34, 34); ej.setToolTip("Export as JSON"); ej.clicked.connect(lambda: self._on_export_results("json")); rlbl.addWidget(ej)
+        ec2 = QPushButton("☰"); ec2.setObjectName("iconBtn"); ec2.setFixedSize(34, 34); ec2.setToolTip("Export as CSV"); ec2.clicked.connect(lambda: self._on_export_results("csv")); rlbl.addWidget(ec2)
+        em = QPushButton("✎"); em.setObjectName("iconBtn"); em.setFixedSize(34, 34); em.setToolTip("Export as Markdown"); em.clicked.connect(lambda: self._on_export_results("markdown")); rlbl.addWidget(em)
         rl.addLayout(rlbl)
 
         self._error_label = QLabel(); self._error_label.setWordWrap(True); self._error_label.setVisible(False); self._error_label.setObjectName("errorBox")
@@ -868,10 +871,11 @@ class DiffiWindow(QMainWindow):
     # -- Mode --
     def _set_mode(self, mode):
         self._mode = mode
-        self._mc.setChecked(mode == "compare"); self._mc.setObjectName("segActive" if mode == "compare" else "")
-        self._ms.setChecked(mode == "single"); self._ms.setObjectName("segActive" if mode == "single" else "")
-        self._mc.style().unpolish(self._mc); self._mc.style().polish(self._mc)
-        self._ms.style().unpolish(self._ms); self._ms.style().polish(self._ms)
+        idx = 0 if mode == "compare" else 1
+        if self._mode_combo.currentIndex() != idx:
+            self._mode_combo.blockSignals(True)
+            self._mode_combo.setCurrentIndex(idx)
+            self._mode_combo.blockSignals(False)
         self._api_tabs.clear()
         if mode == "compare":
             self._api_tabs.addTab(self._old_form, "Old API"); self._api_tabs.addTab(self._new_form, "New API")
