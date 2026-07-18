@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QSpinBox,
     QSplitter,
     QStatusBar,
@@ -56,7 +57,8 @@ class DiffiWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Diffi \u2014 API Comparator")
-        self.setMinimumSize(1000, 740)
+        self.setMinimumSize(900, 600)
+        self.resize(1200, 800)
         self._mode: str = "compare"
         self._results: list[dict] | None = None
         self._field_mappings: list[dict] = []
@@ -288,8 +290,8 @@ class DiffiWindow(QMainWindow):
         central.setObjectName("central")
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
-        layout.setContentsMargins(28, 24, 28, 24)
-        layout.setSpacing(0)
+        layout.setContentsMargins(20, 16, 20, 16)
+        layout.setSpacing(8)
 
         # -- Header --
         hdr = QHBoxLayout()
@@ -304,13 +306,13 @@ class DiffiWindow(QMainWindow):
 
         ic = QPushButton("\u2b07")
         ic.setObjectName("iconBtn")
-        ic.setFixedSize(34, 34)
+        ic.setFixedSize(30, 30)
         ic.setToolTip("Import Configuration (Ctrl+O)")
         ic.clicked.connect(self._on_import_config)
         hdr.addWidget(ic)
         ec = QPushButton("\u2b06")
         ec.setObjectName("iconBtn")
-        ec.setFixedSize(34, 34)
+        ec.setFixedSize(30, 30)
         ec.setToolTip("Export Configuration (Ctrl+Shift+S)")
         ec.clicked.connect(self._on_export_config)
         hdr.addWidget(ec)
@@ -324,18 +326,18 @@ class DiffiWindow(QMainWindow):
         hdr.addWidget(self._profile_combo)
         sp = QPushButton("\u2713")
         sp.setObjectName("removeBtn")
-        sp.setFixedSize(30, 30)
+        sp.setFixedSize(28, 28)
         sp.setToolTip("Save profile")
         sp.clicked.connect(self._on_save_profile)
         hdr.addWidget(sp)
         dp = QPushButton("\u00d7")
         dp.setObjectName("removeBtn")
-        dp.setFixedSize(30, 30)
+        dp.setFixedSize(28, 28)
         dp.setToolTip("Delete profile")
         dp.clicked.connect(self._on_delete_profile)
         hdr.addWidget(dp)
         layout.addLayout(hdr)
-        layout.addSpacing(20)
+        layout.addSpacing(4)
 
         # -- Mode dropdown --
         mrow = QHBoxLayout()
@@ -345,7 +347,7 @@ class DiffiWindow(QMainWindow):
         mrow.addWidget(ml)
         self._mode_combo = QComboBox()
         self._mode_combo.setFixedWidth(200)
-        self._mode_combo.setFixedHeight(34)
+        self._mode_combo.setFixedHeight(32)
         self._mode_combo.addItems(["Compare (Old vs New)", "Single API"])
         self._mode_combo.currentIndexChanged.connect(
             lambda i: self._set_mode("compare" if i == 0 else "single")
@@ -353,17 +355,24 @@ class DiffiWindow(QMainWindow):
         mrow.addWidget(self._mode_combo)
         mrow.addStretch()
         layout.addLayout(mrow)
-        layout.addSpacing(16)
 
         # -- Content splitter --
         splitter = QSplitter(Qt.Orientation.Vertical)
+        splitter.setHandleWidth(6)
+        splitter.setChildrenCollapsible(False)
 
-        # Top config
+        # ── Top config (inside a scroll area so it never overlaps results) ──
+        cfg_scroll = QScrollArea()
+        cfg_scroll.setWidgetResizable(True)
+        cfg_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        cfg_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        cfg_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+
         cfg = QWidget()
         cfg.setObjectName("central")
         cl = QVBoxLayout(cfg)
         cl.setContentsMargins(0, 0, 0, 0)
-        cl.setSpacing(12)
+        cl.setSpacing(10)
 
         self._api_tabs = QTabWidget()
         self._old_form = ApiFormWidget("Old API")
@@ -377,8 +386,8 @@ class DiffiWindow(QMainWindow):
         ids_card = QFrame()
         ids_card.setObjectName("card")
         il = QVBoxLayout(ids_card)
-        il.setContentsMargins(20, 14, 20, 14)
-        il.setSpacing(10)
+        il.setContentsMargins(16, 12, 16, 12)
+        il.setSpacing(8)
 
         r1 = QHBoxLayout()
         r1.setSpacing(8)
@@ -388,28 +397,26 @@ class DiffiWindow(QMainWindow):
         r1.addWidget(self._ids_input, 1)
         imb = QPushButton("\u2b07")
         imb.setObjectName("iconBtn")
-        imb.setFixedSize(34, 34)
+        imb.setFixedSize(30, 30)
         imb.setToolTip("Import IDs from File")
         imb.clicked.connect(self._on_import_ids)
         r1.addWidget(imb)
         il.addLayout(r1)
 
         r2 = QHBoxLayout()
-        r2.setSpacing(20)
+        r2.setSpacing(16)
         r2.addWidget(QLabel("Threads"))
         self._concurrency_spin = QSpinBox()
         self._concurrency_spin.setRange(1, 20)
         self._concurrency_spin.setValue(1)
-        self._concurrency_spin.setFixedWidth(52)
+        self._concurrency_spin.setFixedWidth(50)
         r2.addWidget(self._concurrency_spin)
         r2.addSpacing(4)
         il2 = QLabel("Ignore Fields")
         il2.setObjectName("fieldLabel")
         r2.addWidget(il2)
         self._ignore_input = QLineEdit()
-        self._ignore_input.setPlaceholderText(
-            "timestamp, user.*, re:^_internal"
-        )
+        self._ignore_input.setPlaceholderText("timestamp, user.*, re:^_internal")
         self._ignore_input.setToolTip(
             "Comma-separated field paths to exclude.\n"
             "Supports prefixes ('user' ignores 'user.name'),\n"
@@ -420,7 +427,7 @@ class DiffiWindow(QMainWindow):
 
         # Advanced options row
         r3 = QHBoxLayout()
-        r3.setSpacing(16)
+        r3.setSpacing(12)
         self._ssl_check = QCheckBox("Skip SSL verification")
         self._ssl_check.setChecked(False)
         r3.addWidget(self._ssl_check)
@@ -428,14 +435,14 @@ class DiffiWindow(QMainWindow):
         r3.addWidget(QLabel("Proxy"))
         self._proxy_input = QLineEdit()
         self._proxy_input.setPlaceholderText("http://proxy:8080")
-        self._proxy_input.setFixedWidth(200)
+        self._proxy_input.setFixedWidth(180)
         r3.addWidget(self._proxy_input)
         r3.addSpacing(4)
         r3.addWidget(QLabel("Rate limit (s)"))
         self._rate_spin = QSpinBox()
         self._rate_spin.setRange(0, 60)
         self._rate_spin.setValue(0)
-        self._rate_spin.setFixedWidth(52)
+        self._rate_spin.setFixedWidth(50)
         self._rate_spin.setToolTip("Minimum seconds between requests (0 = none)")
         r3.addWidget(self._rate_spin)
         r3.addStretch()
@@ -447,12 +454,12 @@ class DiffiWindow(QMainWindow):
         fr.setSpacing(12)
         self._fetch_btn = QPushButton("\u25b6  Run Comparison")
         self._fetch_btn.setObjectName("greenBtn")
-        self._fetch_btn.setFixedHeight(40)
+        self._fetch_btn.setFixedHeight(38)
         self._fetch_btn.setFixedWidth(180)
         self._fetch_btn.clicked.connect(self._on_fetch)
         self._cancel_btn = QPushButton("\u2716  Cancel")
         self._cancel_btn.setObjectName("cancelBtn")
-        self._cancel_btn.setFixedHeight(40)
+        self._cancel_btn.setFixedHeight(38)
         self._cancel_btn.setFixedWidth(120)
         self._cancel_btn.setVisible(False)
         self._cancel_btn.clicked.connect(self._on_cancel)
@@ -466,15 +473,17 @@ class DiffiWindow(QMainWindow):
         fr.addWidget(self._progress)
         fr.addStretch()
         cl.addLayout(fr)
+        cl.addStretch()
 
-        splitter.addWidget(cfg)
+        cfg_scroll.setWidget(cfg)
+        splitter.addWidget(cfg_scroll)
 
-        # Results
+        # ── Results ──
         res = QWidget()
         res.setObjectName("central")
         rl = QVBoxLayout(res)
         rl.setContentsMargins(0, 0, 0, 0)
-        rl.setSpacing(8)
+        rl.setSpacing(6)
 
         # Search bar (#3)
         search_row = QHBoxLayout()
@@ -484,13 +493,14 @@ class DiffiWindow(QMainWindow):
         self._search_input.setPlaceholderText(
             "\U0001f50d  Filter results by ID or field path..."
         )
-        self._search_input.setFixedWidth(300)
+        self._search_input.setFixedWidth(280)
+        self._search_input.setFixedHeight(30)
         self._search_input.textChanged.connect(self._on_search_changed)
         search_row.addWidget(self._search_input)
         search_row.addStretch()
 
         rlbl = QHBoxLayout()
-        rlbl.setSpacing(8)
+        rlbl.setSpacing(6)
         rt = QLabel("Results")
         rt.setObjectName("sectionTitle")
         rlbl.addWidget(rt)
@@ -501,7 +511,7 @@ class DiffiWindow(QMainWindow):
         rlbl.addWidget(self._mapping_btn)
         hb = QPushButton("\u21bb")
         hb.setObjectName("iconBtn")
-        hb.setFixedSize(34, 34)
+        hb.setFixedSize(30, 30)
         hb.setToolTip("Toggle History")
         hb.clicked.connect(
             lambda: self._history_dock.setVisible(
@@ -511,27 +521,26 @@ class DiffiWindow(QMainWindow):
         rlbl.addWidget(hb)
         ej = QPushButton("{}")
         ej.setObjectName("iconBtn")
-        ej.setFixedSize(34, 34)
+        ej.setFixedSize(30, 30)
         ej.setToolTip("Export as JSON")
         ej.clicked.connect(lambda: self._on_export_results("json"))
         rlbl.addWidget(ej)
         ec2 = QPushButton("\u2630")
         ec2.setObjectName("iconBtn")
-        ec2.setFixedSize(34, 34)
+        ec2.setFixedSize(30, 30)
         ec2.setToolTip("Export as CSV")
         ec2.clicked.connect(lambda: self._on_export_results("csv"))
         rlbl.addWidget(ec2)
         em = QPushButton("\u270e")
         em.setObjectName("iconBtn")
-        em.setFixedSize(34, 34)
+        em.setFixedSize(30, 30)
         em.setToolTip("Export as Markdown")
         em.clicked.connect(lambda: self._on_export_results("markdown"))
         rlbl.addWidget(em)
 
-        # cURL export button (#13)
         curl_btn = QPushButton("\u2318")
         curl_btn.setObjectName("iconBtn")
-        curl_btn.setFixedSize(34, 34)
+        curl_btn.setFixedSize(30, 30)
         curl_btn.setToolTip("Copy as cURL command")
         curl_btn.clicked.connect(self._on_export_curl)
         rlbl.addWidget(curl_btn)
@@ -547,15 +556,17 @@ class DiffiWindow(QMainWindow):
 
         self._results_scroll = QScrollArea()
         self._results_scroll.setWidgetResizable(True)
+        self._results_scroll.setFrameShape(QFrame.Shape.NoFrame)
         self._results_scroll.setStyleSheet(
-            "border: none; background: transparent;"
+            "QScrollArea { border: none; background: transparent; }"
         )
         self._results_content = QWidget()
         self._results_content.setObjectName("central")
         self._results_layout_inner = QVBoxLayout(self._results_content)
         self._results_layout_inner.setSpacing(8)
+        self._results_layout_inner.setContentsMargins(0, 0, 4, 0)
         self._results_scroll.setWidget(self._results_content)
-        rl.addWidget(self._results_scroll)
+        rl.addWidget(self._results_scroll, 1)
 
         # empty state placeholder (#9)
         self._empty_label = QLabel(
@@ -567,8 +578,10 @@ class DiffiWindow(QMainWindow):
         self._results_layout_inner.addWidget(self._empty_label)
 
         splitter.addWidget(res)
-        splitter.setStretchFactor(0, 1)
-        splitter.setStretchFactor(1, 2)
+
+        # Set initial proportions: 40% config, 60% results
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
         layout.addWidget(splitter, 1)
 
         # History dock
@@ -596,6 +609,7 @@ class DiffiWindow(QMainWindow):
             Qt.DockWidgetArea.RightDockWidgetArea, self._history_dock
         )
         self._history_dock.setVisible(False)
+        self._history_dock.setFixedWidth(280)
 
         # Status bar
         self._status_bar = QStatusBar()
@@ -1441,5 +1455,5 @@ def main() -> None:
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     window = DiffiWindow()
-    window.show()
+    window.showMaximized()
     sys.exit(app.exec())
