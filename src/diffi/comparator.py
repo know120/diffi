@@ -1,10 +1,14 @@
+"""Core comparison logic: field collection, deep diff, field mapping."""
 from __future__ import annotations
 
+import fnmatch
+import re
 from typing import Any
 
 
-def collect_fields(obj: Any, prefix: str = "") -> list[dict]:
-    fields: list[dict] = []
+def collect_fields(obj: Any, prefix: str = "") -> list[dict[str, Any]]:
+    """Return a flat list of ``{"path": ..., "type": ...}`` entries."""
+    fields: list[dict[str, Any]] = []
     if not isinstance(obj, dict):
         return fields
     for key, value in obj.items():
@@ -22,19 +26,47 @@ def collect_fields(obj: Any, prefix: str = "") -> list[dict]:
 
 
 def _is_ignored(path: str, ignore_fields: set[str]) -> bool:
+    """Check whether *path* should be ignored.
+
+    Supports:
+      - exact match: ``user.email``
+      - prefix match: ``user`` ignores ``user.name``, ``user.email``, …
+      - glob patterns: ``user.*``, ``data[*].id``
+      - regex patterns prefixed with ``re:``, e.g. ``re:^user\\.\\w+``  (#11)
+    """
     for ignored in ignore_fields:
+        # regex support (#11)
+        if ignored.startswith("re:"):
+            try:
+                if re.search(ignored[3:], path):
+                    return True
+            except re.error:
+                continue
+            continue
+        # glob support
+        if any(c in ignored for c in ("*", "?", "[")):
+            if fnmatch.fnmatch(path, ignored):
+                return True
+            continue
+        # exact / prefix match (original behaviour)
         if path == ignored or path.startswith(ignored + ".") or path.startswith(ignored + "["):
             return True
     return False
 
 
 def deep_compare(
-    old_obj: Any, new_obj: Any, path: str = "",
+    old_obj: Any,
+    new_obj: Any,
+    path: str = "",
     ignore_fields: set[str] | None = None,
-) -> dict:
-    missing: list[dict] = []
-    extra: list[dict] = []
-    type_changes: list[dict] = []
+) -> dict[str, list[dict[str, Any]]]:
+    """Recursively diff two JSON-like objects.
+
+    Returns ``{"missing": [...], "extra": [...], "typeChanges": [...]}``.
+    """
+    missing: list[dict[str, Any]] = []
+    extra: list[dict[str, Any]] = []
+    type_changes: list[dict[str, Any]] = []
 
     if ignore_fields is None:
         ignore_fields = set()
@@ -81,7 +113,12 @@ def deep_compare(
         if isinstance(old_val, list) and isinstance(new_val, list):
             if not old_val and not new_val:
                 continue
-            if old_val and new_val and isinstance(old_val[0], dict) and isinstance(new_val[0], dict):
+            if (
+                old_val
+                and new_val
+                and isinstance(old_val[0], dict)
+                and isinstance(new_val[0], dict)
+            ):
                 max_len = max(len(old_val), len(new_val))
                 for i in range(max_len):
                     item_path = f"{current_path}[{i}]"
@@ -92,7 +129,9 @@ def deep_compare(
                     elif i >= len(new_val):
                         missing.append({"path": item_path, "value": old_val[i]})
                     else:
-                        sub = deep_compare(old_val[i], new_val[i], item_path, ignore_fields)
+                        sub = deep_compare(
+                            old_val[i], new_val[i], item_path, ignore_fields
+                        )
                         missing.extend(sub["missing"])
                         extra.extend(sub["extra"])
                         type_changes.extend(sub["typeChanges"])
@@ -126,7 +165,8 @@ def deep_compare(
     return {"missing": missing, "extra": extra, "typeChanges": type_changes}
 
 
-def apply_field_mappings(data: Any, mappings: list[dict]) -> Any:
+def apply_field_mappings(data: Any, mappings: list[dict[str, str]]) -> Any:
+    """Remap field paths in *data* according to *mappings*."""
     if not mappings or not isinstance(data, dict):
         return data
     if isinstance(data, list):
