@@ -10,8 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtCore import QSize, Qt, QTimer
+from PySide6.QtGui import QAction, QFont, QIcon, QKeySequence, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -51,6 +51,35 @@ from .utils import (
     load_json,
     save_json,
 )
+
+
+def _icon(theme_name: str, fallback: str, size: int = 16) -> QIcon:
+    """Return a themed icon, or render *fallback* text as a pixmap."""
+    icon = QIcon.fromTheme(theme_name)
+    if not icon.isNull():
+        return icon
+    px = QPixmap(size, size)
+    px.fill(Qt.GlobalColor.transparent)
+    p = QPainter(px)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    font = QFont("Segoe UI", size - 4, QFont.Weight.DemiBold)
+    p.setFont(font)
+    p.setPen(Qt.GlobalColor.white)
+    p.drawText(px.rect(), Qt.AlignmentFlag.AlignCenter, fallback)
+    p.end()
+    return icon
+
+
+def _icon_btn(theme: str, fallback: str, tip: str, size: int = 30) -> QPushButton:
+    """Create a styled icon button with tooltip."""
+    ico = _icon(theme, fallback, 16)
+    btn = QPushButton()
+    btn.setObjectName("iconBtn")
+    btn.setFixedSize(size, size)
+    btn.setIconSize(QSize(16, 16))
+    btn.setIcon(ico)
+    btn.setToolTip(tip)
+    return btn
 
 
 class DiffiWindow(QMainWindow):
@@ -178,9 +207,9 @@ class DiffiWindow(QMainWindow):
                 color: #6c7086;
                 border: 1px solid transparent;
                 border-radius: 8px;
-                padding: 4px;
-                font-size: 16px;
+                padding: 2px;
             }
+            QPushButton#iconBtn QIcon { width: 16px; height: 16px; }
             QPushButton#iconBtn:hover { background: #313244; color: #cdd6f4; border-color: #45475a; }
             QPushButton#iconBtn:pressed { background: #45475a; }
 
@@ -304,16 +333,10 @@ class DiffiWindow(QMainWindow):
         hdr.addWidget(s)
         hdr.addStretch()
 
-        ic = QPushButton("\u2b07")
-        ic.setObjectName("iconBtn")
-        ic.setFixedSize(30, 30)
-        ic.setToolTip("Import Configuration (Ctrl+O)")
+        ic = _icon_btn("document-import", "\u21e3", "Import Configuration (Ctrl+O)")
         ic.clicked.connect(self._on_import_config)
         hdr.addWidget(ic)
-        ec = QPushButton("\u2b06")
-        ec.setObjectName("iconBtn")
-        ec.setFixedSize(30, 30)
-        ec.setToolTip("Export Configuration (Ctrl+Shift+S)")
+        ec = _icon_btn("document-export", "\u21e1", "Export Configuration (Ctrl+Shift+S)")
         ec.clicked.connect(self._on_export_config)
         hdr.addWidget(ec)
         hdr.addSpacing(4)
@@ -395,10 +418,7 @@ class DiffiWindow(QMainWindow):
         self._ids_input.setPlaceholderText("e.g. 1, 2, 3, 5, 10")
         self._ids_input.textChanged.connect(self._mark_unsaved)
         r1.addWidget(self._ids_input, 1)
-        imb = QPushButton("\u2b07")
-        imb.setObjectName("iconBtn")
-        imb.setFixedSize(30, 30)
-        imb.setToolTip("Import IDs from File")
+        imb = _icon_btn("file-import", "\u21e3", "Import IDs from File")
         imb.clicked.connect(self._on_import_ids)
         r1.addWidget(imb)
         il.addLayout(r1)
@@ -509,39 +529,24 @@ class DiffiWindow(QMainWindow):
         self._mapping_btn.setVisible(False)
         self._mapping_btn.clicked.connect(self._on_configure_mappings)
         rlbl.addWidget(self._mapping_btn)
-        hb = QPushButton("\u21bb")
-        hb.setObjectName("iconBtn")
-        hb.setFixedSize(30, 30)
-        hb.setToolTip("Toggle History")
+        hb = _icon_btn("view-history", "\u21bb", "Toggle History")
         hb.clicked.connect(
             lambda: self._history_dock.setVisible(
                 not self._history_dock.isVisible()
             )
         )
         rlbl.addWidget(hb)
-        ej = QPushButton("{}")
-        ej.setObjectName("iconBtn")
-        ej.setFixedSize(30, 30)
-        ej.setToolTip("Export as JSON")
+        ej = _icon_btn("application-json", "{", "Export as JSON")
         ej.clicked.connect(lambda: self._on_export_results("json"))
         rlbl.addWidget(ej)
-        ec2 = QPushButton("\u2630")
-        ec2.setObjectName("iconBtn")
-        ec2.setFixedSize(30, 30)
-        ec2.setToolTip("Export as CSV")
+        ec2 = _icon_btn("text-csv", "\u2261", "Export as CSV")
         ec2.clicked.connect(lambda: self._on_export_results("csv"))
         rlbl.addWidget(ec2)
-        em = QPushButton("\u270e")
-        em.setObjectName("iconBtn")
-        em.setFixedSize(30, 30)
-        em.setToolTip("Export as Markdown")
+        em = _icon_btn("text-markdown", "\u270e", "Export as Markdown")
         em.clicked.connect(lambda: self._on_export_results("markdown"))
         rlbl.addWidget(em)
 
-        curl_btn = QPushButton("\u2318")
-        curl_btn.setObjectName("iconBtn")
-        curl_btn.setFixedSize(30, 30)
-        curl_btn.setToolTip("Copy as cURL command")
+        curl_btn = _icon_btn("application-x-shellscript", "\u2318", "Copy as cURL command")
         curl_btn.clicked.connect(self._on_export_curl)
         rlbl.addWidget(curl_btn)
 
