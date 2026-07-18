@@ -22,9 +22,6 @@ class ApiWorker(QThread):
     error_signal = Signal(str, str)
 
     # -- class-level OAuth2 token cache (keyed by (token_url, client_id)) --------
-    _oauth_cache_lock = threading.Lock()
-    _oauth_cache: dict[tuple[str, str], tuple[str, float]] = {}
-
     def __init__(
         self,
         configs: list[dict],
@@ -35,8 +32,6 @@ class ApiWorker(QThread):
         max_retries: int = 2,
         retry_delay: float = 1.0,
         verify_ssl: bool = True,
-        proxy: str | None = None,
-        rate_limit: float = 0.0,
         parent: Any = None,
     ) -> None:
         super().__init__(parent)
@@ -48,11 +43,7 @@ class ApiWorker(QThread):
         self.max_retries: int = max_retries
         self.retry_delay: float = retry_delay
         self.verify_ssl: bool = verify_ssl
-        self.proxy: str | None = proxy
         self._cancel_event = threading.Event()
-        self._rate_semaphore = (
-            threading.Semaphore(1) if rate_limit <= 0 else _RateLimiter(rate_limit)
-        )
 
     # -- public ----------------------------------------------------------------
 
@@ -93,13 +84,11 @@ class ApiWorker(QThread):
             datas: list[Any] = []
             response_times: list[float] = []
             status_codes: list[int] = []
-            response_sizes: list[int] = []
             for config in self.configs:
-                data, elapsed, status_code, size = self._call_api(config, id_)
+                data, elapsed, status_code = self._call_api(config, id_)
                 datas.append(data)
                 response_times.append(elapsed)
                 status_codes.append(status_code)
-                response_sizes.append(size)
 
             if len(datas) == 2:
                 old_data, raw_new = datas
@@ -124,10 +113,6 @@ class ApiWorker(QThread):
                     "old": status_codes[0],
                     "new": status_codes[1],
                 }
-                id_results["responseSizes"] = {
-                    "old": response_sizes[0],
-                    "new": response_sizes[1],
-                }
                 id_results["statusCodeDiff"] = status_codes[0] != status_codes[1]
                 id_results.update(comparison)
             else:
@@ -136,7 +121,6 @@ class ApiWorker(QThread):
                 id_results["fields"] = collect_fields(data)
                 id_results["responseTimes"] = {"single": response_times[0]}
                 id_results["statusCodes"] = {"single": status_codes[0]}
-                id_results["responseSizes"] = {"single": response_sizes[0]}
             id_results["error"] = None
         except Exception as e:
             id_results["error"] = str(e)
@@ -149,8 +133,8 @@ class ApiWorker(QThread):
 
     def _call_api(  # noqa: C901
         self, config: dict[str, Any], id_: str
-    ) -> tuple[Any, float, int, int]:
-        """Return (parsed_json, elapsed_seconds, status_code, response_bytes)."""
+    ) -> tuple[Any, float, int]:
+        """Return (parsed_json, elapsed_seconds, status_code)."""
         url = _render_template(config["url"], id_)
         method = config.get("method", "GET").upper()
 
@@ -165,15 +149,10 @@ class ApiWorker(QThread):
             if "Content-Type" not in headers:
                 headers["Content-Type"] = "application/json"
 
-        proxies: dict[str, str] | None = None
-        if self.proxy:
-            proxies = {"http": self.proxy, "https": self.proxy}
-
         last_exc: Exception | None = None
         for attempt in range(1 + self.max_retries):
             if self._cancel_event.is_set():
                 raise ValueError("Operation cancelled")
-            self._rate_semaphore.acquire()  # type: ignore[union-attr]
             start = time.time()
             try:
                 res = requests.request(
@@ -183,7 +162,6 @@ class ApiWorker(QThread):
                     data=body,
                     timeout=TIMEOUT,
                     verify=self.verify_ssl,
-                    proxies=proxies,
                 )
                 elapsed = round(time.time() - start, 3)
                 if not res.ok:
@@ -195,7 +173,7 @@ class ApiWorker(QThread):
                         f"Response is not valid JSON (HTTP {res.status_code}): "
                         f"{res.text[:200]}"
                     ) from je
-                return parsed, elapsed, res.status_code, len(res.content)
+                return parsed, elapsed, res.status_code
             except requests.exceptions.Timeout:
                 last_exc = ValueError(
                     f"Request timed out after {TIMEOUT}s: {method} {full_url}"
@@ -256,24 +234,15 @@ class ApiWorker(QThread):
             if token:
                 headers["Authorization"] = f"Bearer {token}"
 
-    @classmethod
+    @staticmethod
     def _get_oauth2_token(
-        cls, config: dict[str, Any], id_: str
+        config: dict[str, Any], id_: str
     ) -> str | None:
         token_url = _render_template(config.get("token_url", ""), id_)
         client_id = _render_template(config.get("client_id", ""), id_)
         client_secret = _render_template(config.get("client_secret", ""), id_)
         if not token_url:
             return None
-
-        cache_key = (token_url, client_id)
-        with cls._oauth_cache_lock:
-            cached = cls._oauth_cache.get(cache_key)
-            if cached:
-                token, expires_at = cached
-                if time.time() < expires_at - 30:
-                    return token
-
         try:
             res = requests.post(
                 token_url,
@@ -285,15 +254,7 @@ class ApiWorker(QThread):
                 timeout=TIMEOUT,
             )
             res.raise_for_status()
-            body = res.json()
-            token = body.get("access_token", "")
-            expires_in = float(body.get("expires_in", 3600))
-            with cls._oauth_cache_lock:
-                cls._oauth_cache[cache_key] = (
-                    token,
-                    time.time() + expires_in,
-                )
-            return token
+            return res.json().get("access_token", "")
         except Exception:
             return None
 
@@ -310,28 +271,3 @@ def _render_template(text: str, id_: str) -> str:
 
     result = re.sub(r"\{\{(\w+)\}\}", _replacer, result)
     return result
-
-
-# -- rate limiter -------------------------------------------------------------
-
-
-class _RateLimiter:
-    """Simple token-bucket rate limiter backed by a ``threading.Semaphore``."""
-
-    def __init__(self, min_interval: float) -> None:
-        self._min_interval = min_interval
-        self._lock = threading.Lock()
-        self._last: float = 0.0
-        self._sem = threading.Semaphore(1)
-
-    def acquire(self) -> None:
-        self._sem.acquire()
-        with self._lock:
-            now = time.time()
-            wait = self._min_interval - (now - self._last)
-            if wait > 0:
-                time.sleep(wait)
-            self._last = time.time()
-
-    def release(self) -> None:
-        self._sem.release()

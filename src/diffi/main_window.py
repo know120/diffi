@@ -40,7 +40,6 @@ from PySide6.QtWidgets import (
 
 from .api_form import ApiFormWidget
 from .api_worker import ApiWorker
-from .comparator import apply_field_mappings
 from .field_mapping_dialog import FieldMappingDialog
 from .result_card import ResultCard
 from .utils import (
@@ -100,8 +99,6 @@ class DiffiWindow(QMainWindow):
         self._setup_shortcuts()
         self._refresh_history_list()
         self._refresh_profile_combo()
-        self._update_empty_state()
-
     # ======================================================================
     # Styles
     # ======================================================================
@@ -121,8 +118,6 @@ class DiffiWindow(QMainWindow):
             QLabel#missingLabel { font-size: 12px; font-weight: 600; color: #f38ba8; background: transparent; margin-top: 4px; }
             QLabel#extraLabel { font-size: 12px; font-weight: 600; color: #f9e2af; background: transparent; margin-top: 4px; }
             QLabel#typeLabel { font-size: 12px; font-weight: 600; color: #89b4fa; background: transparent; margin-top: 4px; }
-            QLabel#emptyState { font-size: 14px; color: #585b70; padding: 40px; }
-
             QFrame#card {
                 background: #181825;
                 border: 1px solid #313244;
@@ -290,24 +285,6 @@ class DiffiWindow(QMainWindow):
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 
             QSplitter::handle { background: #313244; height: 1px; }
-
-            QPlainTextEdit#diffView {
-                background: #11111b;
-                border: 1px solid #313244;
-                border-radius: 6px;
-                font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
-                font-size: 11px;
-                padding: 8px;
-            }
-
-            QLineEdit#searchInput {
-                background: #11111b;
-                border: 1px solid #313244;
-                border-radius: 8px;
-                padding: 6px 12px;
-                font-size: 13px;
-            }
-            QLineEdit#searchInput:focus { border-color: #89b4fa; }
         """)
 
     # ======================================================================
@@ -451,20 +428,6 @@ class DiffiWindow(QMainWindow):
         self._ssl_check = QCheckBox("Skip SSL verification")
         self._ssl_check.setChecked(False)
         r3.addWidget(self._ssl_check)
-        r3.addSpacing(4)
-        r3.addWidget(QLabel("Proxy"))
-        self._proxy_input = QLineEdit()
-        self._proxy_input.setPlaceholderText("http://proxy:8080")
-        self._proxy_input.setFixedWidth(180)
-        r3.addWidget(self._proxy_input)
-        r3.addSpacing(4)
-        r3.addWidget(QLabel("Rate limit (s)"))
-        self._rate_spin = QSpinBox()
-        self._rate_spin.setRange(0, 60)
-        self._rate_spin.setValue(0)
-        self._rate_spin.setFixedWidth(50)
-        self._rate_spin.setToolTip("Minimum seconds between requests (0 = none)")
-        r3.addWidget(self._rate_spin)
         r3.addStretch()
         il.addLayout(r3)
         cl.addWidget(ids_card)
@@ -505,20 +468,6 @@ class DiffiWindow(QMainWindow):
         rl.setContentsMargins(0, 0, 0, 0)
         rl.setSpacing(6)
 
-        # Search bar (#3)
-        search_row = QHBoxLayout()
-        search_row.setSpacing(8)
-        self._search_input = QLineEdit()
-        self._search_input.setObjectName("searchInput")
-        self._search_input.setPlaceholderText(
-            "\U0001f50d  Filter results by ID or field path..."
-        )
-        self._search_input.setFixedWidth(280)
-        self._search_input.setFixedHeight(30)
-        self._search_input.textChanged.connect(self._on_search_changed)
-        search_row.addWidget(self._search_input)
-        search_row.addStretch()
-
         rlbl = QHBoxLayout()
         rlbl.setSpacing(6)
         rt = QLabel("Results")
@@ -536,21 +485,13 @@ class DiffiWindow(QMainWindow):
             )
         )
         rlbl.addWidget(hb)
-        ej = _icon_btn("application-json", "{", "Export as JSON")
-        ej.clicked.connect(lambda: self._on_export_results("json"))
-        rlbl.addWidget(ej)
-        ec2 = _icon_btn("text-csv", "\u2261", "Export as CSV")
-        ec2.clicked.connect(lambda: self._on_export_results("csv"))
-        rlbl.addWidget(ec2)
-        em = _icon_btn("text-markdown", "\u270e", "Export as Markdown")
-        em.clicked.connect(lambda: self._on_export_results("markdown"))
-        rlbl.addWidget(em)
+        self._export_combo = QComboBox()
+        self._export_combo.setFixedWidth(130)
+        self._export_combo.setFixedHeight(30)
+        self._export_combo.addItems(["Export...", "JSON", "CSV", "Markdown"])
+        self._export_combo.currentIndexChanged.connect(self._on_export_selected)
+        rlbl.addWidget(self._export_combo)
 
-        curl_btn = _icon_btn("application-x-shellscript", "\u2318", "Copy as cURL command")
-        curl_btn.clicked.connect(self._on_export_curl)
-        rlbl.addWidget(curl_btn)
-
-        rl.addLayout(search_row)
         rl.addLayout(rlbl)
 
         self._error_label = QLabel()
@@ -572,15 +513,6 @@ class DiffiWindow(QMainWindow):
         self._results_layout_inner.setContentsMargins(0, 0, 4, 0)
         self._results_scroll.setWidget(self._results_content)
         rl.addWidget(self._results_scroll, 1)
-
-        # empty state placeholder (#9)
-        self._empty_label = QLabel(
-            "Configure two API endpoints above and click "
-            "\u25b6 Run Comparison to see differences."
-        )
-        self._empty_label.setObjectName("emptyState")
-        self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._results_layout_inner.addWidget(self._empty_label)
 
         splitter.addWidget(res)
 
@@ -721,6 +653,14 @@ class DiffiWindow(QMainWindow):
     # Export results
     # ======================================================================
 
+    def _on_export_selected(self, idx: int) -> None:
+        fmt_map = {1: "json", 2: "csv", 3: "markdown"}
+        if idx in fmt_map:
+            self._on_export_results(fmt_map[idx])
+            self._export_combo.blockSignals(True)
+            self._export_combo.setCurrentIndex(0)
+            self._export_combo.blockSignals(False)
+
     def _on_export_results(self, fmt: str) -> None:
         if not self._results:
             QMessageBox.information(
@@ -754,12 +694,10 @@ class DiffiWindow(QMainWindow):
             "id", "status", "error",
             "missing_fields", "extra_fields", "type_changes",
             "rt_old", "rt_new", "sc_old", "sc_new",
-            "size_old", "size_new",
         ])
         for r in self._results:
             rt = r.get("responseTimes", {})
             sc = r.get("statusCodes", {})
-            sz = r.get("responseSizes", {})
             st = (
                 "error"
                 if r.get("error")
@@ -787,8 +725,6 @@ class DiffiWindow(QMainWindow):
                 rt.get("new", ""),
                 sc.get("old", sc.get("single", "")),
                 sc.get("new", ""),
-                sz.get("old", sz.get("single", "")),
-                sz.get("new", ""),
             ])
         return buf.getvalue()
 
@@ -887,35 +823,6 @@ class DiffiWindow(QMainWindow):
         return "\n".join(L)
 
     # ======================================================================
-    # cURL export (#13)
-    # ======================================================================
-
-    def _on_export_curl(self) -> None:
-        config = (
-            self._old_form.get_config()
-            if self._mode == "compare"
-            else self._single_form.get_config()
-        )
-        url = config["url"].replace("{{id}}", "ID")
-        method = config.get("method", "GET")
-        parts = [f"curl -X {method} '{url}'"]
-        for k, v in config.get("headers", {}).items():
-            parts.append(f"  -H '{k}: {v}'")
-        auth = config.get("auth", {})
-        if auth.get("type") == "bearer":
-            parts.append(f"  -H 'Authorization: Bearer {auth.get('token', '')}'")
-        elif auth.get("type") == "basic":
-            parts.append(f"  -u '{auth.get('username', '')}:{auth.get('password', '')}'")
-        body = config.get("body", "")
-        if body and method in ("POST", "PUT", "PATCH"):
-            parts.append(f"  -d '{body.replace(chr(39), chr(39) + chr(92) + chr(39))}'")
-        cmd = " \\\n".join(parts)
-        cb = QApplication.clipboard()
-        if cb:
-            cb.setText(cmd)
-        self._status_bar.showMessage("cURL command copied to clipboard", 3000)
-
-    # ======================================================================
     # Bulk ID import
     # ======================================================================
 
@@ -993,8 +900,6 @@ class DiffiWindow(QMainWindow):
             ignore_fields=ig,
             concurrency=self._concurrency_spin.value(),
             verify_ssl=not self._ssl_check.isChecked(),
-            proxy=self._proxy_input.text().strip() or None,
-            rate_limit=float(self._rate_spin.value()),
         )
         self._worker.finished.connect(self._on_results)
         self._worker.start()
@@ -1105,23 +1010,6 @@ class DiffiWindow(QMainWindow):
                 )
                 sl.addWidget(rl)
 
-        # response size summary
-        all_sz = [r.get("responseSizes", {}) for r in results if not r.get("error")]
-        if all_sz and "old" in all_sz[0]:
-            os_ = [s["old"] for s in all_sz if "old" in s]
-            ns = [s["new"] for s in all_sz if "new" in s]
-            if os_ and ns:
-                from .result_card import _fmt_size
-                sl2 = QLabel(
-                    f"Average Response Size  \u2014  "
-                    f"Old: {_fmt_size(int(sum(os_) / len(os_)))}    "
-                    f"New: {_fmt_size(int(sum(ns) / len(ns)))}"
-                )
-                sl2.setStyleSheet(
-                    "font-size: 12px; color: #6c7086; background: transparent;"
-                )
-                sl.addWidget(sl2)
-
         scr = [
             r
             for r in results
@@ -1181,7 +1069,6 @@ class DiffiWindow(QMainWindow):
             self._results_layout_inner.addWidget(card)
 
         self._results_layout_inner.addStretch()
-        self._update_empty_state()
 
     def _show_error(self, msg: str) -> None:
         self._error_label.setText(msg)
@@ -1194,23 +1081,6 @@ class DiffiWindow(QMainWindow):
                 it.widget().deleteLater()
         self._result_cards = []
         self._results = None
-        self._empty_label = None
-
-    # ======================================================================
-    # Search / Filter (#3)
-    # ======================================================================
-
-    def _on_search_changed(self, text: str) -> None:
-        query = text.strip().lower()
-        if not hasattr(self, "_result_cards"):
-            return
-        for card in self._result_cards:
-            if not query:
-                card.setVisible(True)
-                continue
-            r = card._result
-            searchable = json.dumps(r, default=str).lower()
-            card.setVisible(query in searchable)
 
     # ======================================================================
     # Field Mappings
@@ -1242,25 +1112,6 @@ class DiffiWindow(QMainWindow):
             "timestamp": datetime.now().isoformat(),
             "mode": self._mode,
             "ids": _parse_ids(self._ids_input.text()),
-            "config": {
-                "old_api": (
-                    self._old_form.get_config()
-                    if self._mode == "compare"
-                    else None
-                ),
-                "new_api": (
-                    self._new_form.get_config()
-                    if self._mode == "compare"
-                    else None
-                ),
-                "api": (
-                    self._single_form.get_config()
-                    if self._mode != "compare"
-                    else None
-                ),
-                "ignore_fields": self._ignore_input.text(),
-                "concurrency": self._concurrency_spin.value(),
-            },
             "results_summary": [],
         }
         for r in results:
@@ -1308,23 +1159,7 @@ class DiffiWindow(QMainWindow):
             return
         e = self._history[row]
         self._ids_input.setText(", ".join(str(i) for i in e.get("ids", [])))
-        mode = e.get("mode", "compare")
-        self._set_mode(mode)
-        # restore full config from history (#5)
-        cfg = e.get("config", {})
-        if cfg:
-            if mode == "compare":
-                if cfg.get("old_api"):
-                    self._old_form.set_config(cfg["old_api"])
-                if cfg.get("new_api"):
-                    self._new_form.set_config(cfg["new_api"])
-            else:
-                if cfg.get("api"):
-                    self._single_form.set_config(cfg["api"])
-            if cfg.get("ignore_fields"):
-                self._ignore_input.setText(cfg["ignore_fields"])
-            if cfg.get("concurrency"):
-                self._concurrency_spin.setValue(cfg["concurrency"])
+        self._set_mode(e.get("mode", "compare"))
         self._status_bar.showMessage(
             f"Restored run from {e.get('timestamp', '?')}", 3000
         )
@@ -1439,12 +1274,6 @@ class DiffiWindow(QMainWindow):
     # ======================================================================
     # Empty state (#9)
     # ======================================================================
-
-    def _update_empty_state(self) -> None:
-        has_results = bool(self._result_cards) if hasattr(self, "_result_cards") else False
-        if hasattr(self, "_empty_label") and self._empty_label is not None:
-            self._empty_label.setVisible(not has_results)
-
 
 # ============================================================================
 # Helpers
