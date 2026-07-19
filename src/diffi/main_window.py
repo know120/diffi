@@ -105,186 +105,200 @@ class DiffiWindow(QMainWindow):
 
     def _apply_styles(self) -> None:
         self.setStyleSheet("""
-            * { font-family: "Segoe UI", "SF Pro Display", "Helvetica Neue", sans-serif; }
-            QMainWindow, QWidget#central { background: #1e1e2e; }
-            QWidget { color: #cdd6f4; font-size: 13px; }
+            * {
+                font-family: "Inter", "SF Pro Text", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+                font-size: 13px;
+            }
+            QMainWindow, QWidget#central { background: #0f0f0f; }
+            QWidget { color: #e5e5e5; }
             QLabel { background: transparent; }
-            QLabel#appTitle { font-size: 22px; font-weight: 700; color: #cdd6f4; letter-spacing: -0.3px; }
-            QLabel#appSub { font-size: 13px; color: #6c7086; font-weight: 400; }
-            QLabel#sectionTitle { font-size: 14px; font-weight: 600; color: #bac2de; margin-bottom: 4px; }
-            QLabel#fieldLabel { font-size: 12px; font-weight: 500; color: #6c7086; margin-top: 6px; }
-            QLabel#cardTitle { font-size: 13px; font-weight: 600; color: #cdd6f4; }
-            QLabel#arrowLabel { color: #585b70; font-size: 15px; background: transparent; padding: 0 2px; }
-            QLabel#missingLabel { font-size: 12px; font-weight: 600; color: #f38ba8; background: transparent; margin-top: 4px; }
-            QLabel#extraLabel { font-size: 12px; font-weight: 600; color: #f9e2af; background: transparent; margin-top: 4px; }
-            QLabel#typeLabel { font-size: 12px; font-weight: 600; color: #89b4fa; background: transparent; margin-top: 4px; }
+
+            QLabel#appTitle {
+                font-size: 20px; font-weight: 600; color: #fafafa;
+                letter-spacing: -0.5px;
+            }
+            QLabel#appSub { font-size: 13px; color: #525252; font-weight: 400; }
+            QLabel#sectionTitle {
+                font-size: 11px; font-weight: 600; color: #737373;
+                text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;
+            }
+            QLabel#fieldLabel {
+                font-size: 11px; font-weight: 500; color: #525252;
+                text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px;
+            }
+            QLabel#cardTitle { font-size: 13px; font-weight: 600; color: #e5e5e5; }
+            QLabel#arrowLabel { color: #404040; font-size: 15px; background: transparent; padding: 0 2px; }
+            QLabel#missingLabel { font-size: 11px; font-weight: 600; color: #ef4444; background: transparent; margin-top: 4px; }
+            QLabel#extraLabel { font-size: 11px; font-weight: 600; color: #f59e0b; background: transparent; margin-top: 4px; }
+            QLabel#typeLabel { font-size: 11px; font-weight: 600; color: #3b82f6; background: transparent; margin-top: 4px; }
+
             QFrame#card {
-                background: #181825;
-                border: 1px solid #313244;
-                border-radius: 10px;
+                background: #1a1a1a;
+                border: 1px solid #262626;
+                border-radius: 12px;
             }
             QWidget#cardInner { background: transparent; }
 
             QLineEdit, QPlainTextEdit {
-                background: #11111b;
-                color: #cdd6f4;
-                border: 1px solid #313244;
+                background: #141414;
+                color: #e5e5e5;
+                border: 1px solid #262626;
                 border-radius: 8px;
-                padding: 7px 12px;
+                padding: 8px 12px;
                 font-size: 13px;
-                selection-background-color: #45475a;
+                selection-background-color: #262626;
             }
-            QLineEdit:focus, QPlainTextEdit:focus { border-color: #89b4fa; }
-            QLineEdit:read-only { background: #181825; }
+            QLineEdit:focus, QPlainTextEdit:focus { border-color: #3b82f6; }
+            QLineEdit:read-only { background: #1a1a1a; color: #a3a3a3; }
 
             QComboBox {
-                background: #11111b;
-                color: #cdd6f4;
-                border: 1px solid #313244;
+                background: #141414;
+                color: #e5e5e5;
+                border: 1px solid #262626;
                 border-radius: 8px;
                 padding: 6px 10px;
                 font-size: 13px;
             }
-            QComboBox:focus { border-color: #89b4fa; }
+            QComboBox:focus { border-color: #3b82f6; }
             QComboBox::drop-down { border: none; width: 22px; }
             QComboBox QAbstractItemView {
-                background: #1e1e2e;
-                color: #cdd6f4;
-                border: 1px solid #313244;
+                background: #1a1a1a;
+                color: #e5e5e5;
+                border: 1px solid #262626;
                 border-radius: 8px;
                 padding: 4px;
-                selection-background-color: #45475a;
+                selection-background-color: #262626;
                 outline: none;
             }
 
             QPushButton {
-                background: #1e1e2e;
-                color: #a6adc8;
-                border: 1px solid #313244;
+                background: #1a1a1a;
+                color: #a3a3a3;
+                border: 1px solid #262626;
                 border-radius: 8px;
-                padding: 7px 16px;
+                padding: 8px 16px;
                 font-size: 13px;
             }
-            QPushButton:hover { background: #313244; color: #cdd6f4; border-color: #45475a; }
-            QPushButton:pressed { background: #45475a; }
-            QPushButton:disabled { color: #45475a; background: #181825; border-color: #313244; }
+            QPushButton:hover { background: #262626; color: #e5e5e5; border-color: #333333; }
+            QPushButton:pressed { background: #333333; }
+            QPushButton:disabled { color: #404040; background: #141414; border-color: #1f1f1f; }
 
             QPushButton#primaryBtn {
-                background: #89b4fa;
-                color: #1e1e2e;
+                background: #3b82f6;
+                color: #ffffff;
                 border: none;
                 font-weight: 600;
                 padding: 8px 20px;
             }
-            QPushButton#primaryBtn:hover { background: #b4d0fb; }
+            QPushButton#primaryBtn:hover { background: #60a5fa; }
 
             QPushButton#greenBtn {
-                background: #a6e3a1;
-                color: #1e1e2e;
+                background: #3b82f6;
+                color: #ffffff;
                 border: none;
                 font-weight: 600;
                 padding: 0;
             }
-            QPushButton#greenBtn:hover { background: #c4eec2; }
-            QPushButton#greenBtn:disabled { background: #313244; color: #585b70; }
+            QPushButton#greenBtn:hover { background: #60a5fa; }
+            QPushButton#greenBtn:disabled { background: #262626; color: #404040; }
 
             QPushButton#cancelBtn {
-                background: #f38ba8;
-                color: #1e1e2e;
-                border: none;
-                font-weight: 600;
+                background: transparent;
+                color: #ef4444;
+                border: 1px solid #262626;
+                font-weight: 500;
                 padding: 0;
             }
-            QPushButton#cancelBtn:hover { background: #f5a0bc; }
+            QPushButton#cancelBtn:hover { background: #ef444411; border-color: #ef444433; }
 
             QPushButton#iconBtn {
                 background: transparent;
-                color: #6c7086;
+                color: #525252;
                 border: 1px solid transparent;
                 border-radius: 8px;
                 padding: 2px;
             }
             QPushButton#iconBtn QIcon { width: 16px; height: 16px; }
-            QPushButton#iconBtn:hover { background: #313244; color: #cdd6f4; border-color: #45475a; }
-            QPushButton#iconBtn:pressed { background: #45475a; }
+            QPushButton#iconBtn:hover { background: #262626; color: #a3a3a3; border-color: #333333; }
+            QPushButton#iconBtn:pressed { background: #333333; }
 
             QPushButton#linkBtn {
                 background: transparent;
-                color: #89b4fa;
+                color: #3b82f6;
                 border: none;
                 padding: 2px 0;
                 font-size: 12px;
             }
-            QPushButton#linkBtn:hover { color: #b4d0fb; }
+            QPushButton#linkBtn:hover { color: #60a5fa; }
 
             QPushButton#removeBtn {
                 background: transparent;
-                color: #585b70;
+                color: #404040;
                 border: 1px solid transparent;
                 border-radius: 6px;
                 font-size: 14px;
                 font-weight: 600;
             }
-            QPushButton#removeBtn:hover { color: #f38ba8; background: #f38ba822; border-color: #f38ba844; }
+            QPushButton#removeBtn:hover { color: #ef4444; background: #ef444411; border-color: #ef444422; }
 
             QPushButton#toggleBtn {
                 background: transparent;
-                color: #585b70;
+                color: #404040;
                 border: none;
                 font-size: 12px;
             }
-            QPushButton#toggleBtn:hover { color: #cdd6f4; }
+            QPushButton#toggleBtn:hover { color: #a3a3a3; }
 
-            QLabel#badgeGreen { background: #a6e3a122; color: #a6e3a1; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 500; }
-            QLabel#badgeRed { background: #f38ba822; color: #f38ba8; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 500; }
-            QLabel#badgeYellow { background: #f9e2af22; color: #f9e2af; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 500; }
-            QLabel#badgeBlue { background: #89b4fa22; color: #89b4fa; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+            QLabel#badgeGreen { background: #22c55e1a; color: #22c55e; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; font-family: "SF Mono", "Cascadia Code", "Consolas", monospace; }
+            QLabel#badgeRed { background: #ef44441a; color: #ef4444; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; font-family: "SF Mono", "Cascadia Code", "Consolas", monospace; }
+            QLabel#badgeYellow { background: #f59e0b1a; color: #f59e0b; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; font-family: "SF Mono", "Cascadia Code", "Consolas", monospace; }
+            QLabel#badgeBlue { background: #3b82f61a; color: #3b82f6; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; font-family: "SF Mono", "Cascadia Code", "Consolas", monospace; }
 
             QLabel#errorBox {
-                color: #f38ba8; padding: 12px; background: #f38ba811;
-                border: 1px solid #f38ba833; border-radius: 8px; font-size: 12px;
+                color: #ef4444; padding: 12px; background: #ef44440d;
+                border: 1px solid #ef444422; border-radius: 8px; font-size: 12px;
             }
 
-            QCheckBox { color: #a6adc8; spacing: 6px; }
-            QCheckBox::indicator { width: 16px; height: 16px; border: 1px solid #45475a; border-radius: 4px; background: #11111b; }
-            QCheckBox::indicator:checked { background: #89b4fa; border-color: #89b4fa; }
+            QCheckBox { color: #a3a3a3; spacing: 6px; }
+            QCheckBox::indicator { width: 16px; height: 16px; border: 1px solid #333333; border-radius: 4px; background: #141414; }
+            QCheckBox::indicator:checked { background: #3b82f6; border-color: #3b82f6; }
 
             QSpinBox {
-                background: #11111b; color: #cdd6f4;
-                border: 1px solid #313244; border-radius: 8px;
+                background: #141414; color: #e5e5e5;
+                border: 1px solid #262626; border-radius: 8px;
                 padding: 5px 8px; font-size: 13px;
             }
-            QSpinBox:focus { border-color: #89b4fa; }
+            QSpinBox:focus { border-color: #3b82f6; }
 
-            QTabWidget::pane { border: 1px solid #313244; border-radius: 10px; background: #181825; top: -1px; padding: 4px; }
+            QTabWidget::pane { border: none; background: transparent; top: -1px; padding: 0; }
             QTabBar::tab {
-                background: transparent; color: #6c7086;
-                padding: 8px 20px; border: none; font-size: 13px; font-weight: 500;
-                border-bottom: 2px solid transparent; margin-right: 4px;
+                background: transparent; color: #525252;
+                padding: 8px 16px; border: none; font-size: 13px; font-weight: 500;
+                border-bottom: 2px solid transparent; margin-right: 2px;
             }
-            QTabBar::tab:selected { color: #cdd6f4; border-bottom-color: #89b4fa; }
-            QTabBar::tab:hover { color: #a6adc8; }
+            QTabBar::tab:selected { color: #e5e5e5; border-bottom-color: #3b82f6; }
+            QTabBar::tab:hover { color: #a3a3a3; }
 
-            QProgressBar { border: none; background: #313244; max-height: 4px; border-radius: 2px; }
-            QProgressBar::chunk { background: #89b4fa; border-radius: 2px; }
+            QProgressBar { border: none; background: #262626; max-height: 3px; border-radius: 1px; }
+            QProgressBar::chunk { background: #3b82f6; border-radius: 1px; }
 
-            QDockWidget { color: #cdd6f4; }
-            QDockWidget::title { background: #181825; padding: 10px 14px; font-weight: 600; font-size: 13px; border-bottom: 1px solid #313244; }
+            QDockWidget { color: #e5e5e5; }
+            QDockWidget::title { background: #1a1a1a; padding: 10px 14px; font-weight: 600; font-size: 13px; border-bottom: 1px solid #262626; }
 
             QListWidget {
-                background: #11111b; color: #cdd6f4;
-                border: 1px solid #313244; border-radius: 8px; font-size: 12px; outline: none;
+                background: #141414; color: #e5e5e5;
+                border: 1px solid #262626; border-radius: 8px; font-size: 12px; outline: none;
             }
-            QListWidget::item { padding: 8px 10px; border-bottom: 1px solid #1e1e2e; }
-            QListWidget::item:selected { background: #45475a; color: #cdd6f4; }
-            QListWidget::item:hover:!selected { background: #1e1e2e; }
+            QListWidget::item { padding: 8px 10px; border-bottom: 1px solid #1a1a1a; }
+            QListWidget::item:selected { background: #262626; color: #e5e5e5; }
+            QListWidget::item:hover:!selected { background: #1a1a1a; }
 
-            QScrollBar:vertical { background: transparent; width: 8px; }
-            QScrollBar::handle:vertical { background: #313244; border-radius: 4px; min-height: 24px; }
-            QScrollBar::handle:vertical:hover { background: #45475a; }
+            QScrollBar:vertical { background: transparent; width: 6px; }
+            QScrollBar::handle:vertical { background: #333333; border-radius: 3px; min-height: 24px; }
+            QScrollBar::handle:vertical:hover { background: #404040; }
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 
-            QSplitter::handle { background: #313244; height: 1px; }
+            QSplitter::handle { background: #262626; height: 1px; }
         """)
 
     # ======================================================================
@@ -296,8 +310,8 @@ class DiffiWindow(QMainWindow):
         central.setObjectName("central")
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
-        layout.setContentsMargins(20, 16, 20, 16)
-        layout.setSpacing(8)
+        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setSpacing(12)
 
         # -- Header --
         hdr = QHBoxLayout()
@@ -305,9 +319,6 @@ class DiffiWindow(QMainWindow):
         t = QLabel("Diffi")
         t.setObjectName("appTitle")
         hdr.addWidget(t)
-        s = QLabel("API Comparator")
-        s.setObjectName("appSub")
-        hdr.addWidget(s)
         hdr.addStretch()
 
         ic = _icon_btn("document-import", "\u21e3", "Import Configuration (Ctrl+O)")
@@ -337,7 +348,6 @@ class DiffiWindow(QMainWindow):
         dp.clicked.connect(self._on_delete_profile)
         hdr.addWidget(dp)
         layout.addLayout(hdr)
-        layout.addSpacing(4)
 
         # -- Mode dropdown --
         mrow = QHBoxLayout()
@@ -358,7 +368,7 @@ class DiffiWindow(QMainWindow):
 
         # -- Content splitter --
         splitter = QSplitter(Qt.Orientation.Vertical)
-        splitter.setHandleWidth(6)
+        splitter.setHandleWidth(1)
         splitter.setChildrenCollapsible(False)
 
         # ── Top config (inside a scroll area so it never overlaps results) ──
@@ -372,7 +382,7 @@ class DiffiWindow(QMainWindow):
         cfg.setObjectName("central")
         cl = QVBoxLayout(cfg)
         cl.setContentsMargins(0, 0, 0, 0)
-        cl.setSpacing(10)
+        cl.setSpacing(12)
 
         self._api_tabs = QTabWidget()
         self._old_form = ApiFormWidget("Old API")
@@ -386,8 +396,8 @@ class DiffiWindow(QMainWindow):
         ids_card = QFrame()
         ids_card.setObjectName("card")
         il = QVBoxLayout(ids_card)
-        il.setContentsMargins(16, 12, 16, 12)
-        il.setSpacing(8)
+        il.setContentsMargins(20, 16, 20, 16)
+        il.setSpacing(10)
 
         r1 = QHBoxLayout()
         r1.setSpacing(8)
@@ -437,12 +447,12 @@ class DiffiWindow(QMainWindow):
         fr.setSpacing(12)
         self._fetch_btn = QPushButton("\u25b6  Run Comparison")
         self._fetch_btn.setObjectName("greenBtn")
-        self._fetch_btn.setFixedHeight(38)
+        self._fetch_btn.setFixedHeight(36)
         self._fetch_btn.setFixedWidth(180)
         self._fetch_btn.clicked.connect(self._on_fetch)
         self._cancel_btn = QPushButton("\u2716  Cancel")
         self._cancel_btn.setObjectName("cancelBtn")
-        self._cancel_btn.setFixedHeight(38)
+        self._cancel_btn.setFixedHeight(36)
         self._cancel_btn.setFixedWidth(120)
         self._cancel_btn.setVisible(False)
         self._cancel_btn.clicked.connect(self._on_cancel)
@@ -450,7 +460,7 @@ class DiffiWindow(QMainWindow):
         self._progress.setVisible(False)
         self._progress.setMaximum(0)
         self._progress.setFixedWidth(160)
-        self._progress.setFixedHeight(4)
+        self._progress.setFixedHeight(3)
         fr.addWidget(self._fetch_btn)
         fr.addWidget(self._cancel_btn)
         fr.addWidget(self._progress)
@@ -466,7 +476,7 @@ class DiffiWindow(QMainWindow):
         res.setObjectName("central")
         rl = QVBoxLayout(res)
         rl.setContentsMargins(0, 0, 0, 0)
-        rl.setSpacing(6)
+        rl.setSpacing(8)
 
         rlbl = QHBoxLayout()
         rlbl.setSpacing(6)
@@ -546,7 +556,7 @@ class DiffiWindow(QMainWindow):
             Qt.DockWidgetArea.RightDockWidgetArea, self._history_dock
         )
         self._history_dock.setVisible(False)
-        self._history_dock.setFixedWidth(280)
+        self._history_dock.setFixedWidth(260)
 
         # Status bar
         self._status_bar = QStatusBar()
@@ -965,29 +975,30 @@ class DiffiWindow(QMainWindow):
         sc.setObjectName("card")
         sl = QVBoxLayout(sc)
         sl.setContentsMargins(20, 16, 20, 16)
-        sl.setSpacing(10)
+        sl.setSpacing(12)
         srow = QHBoxLayout()
-        srow.setSpacing(32)
+        srow.setSpacing(40)
         for lbl, val, col in [
-            ("Total IDs", str(total), "#cdd6f4"),
-            ("Successful", str(success), "#a6e3a1"),
-            ("Errors", str(ec), "#f38ba8"),
+            ("Total IDs", str(total), "#e5e5e5"),
+            ("Successful", str(success), "#22c55e"),
+            ("Errors", str(ec), "#ef4444"),
             (
                 "Status",
                 "Changes Detected" if has else "All Identical",
-                "#f9e2af" if has else "#a6e3a1",
+                "#f59e0b" if has else "#22c55e",
             ),
         ]:
             c = QVBoxLayout()
             c.setSpacing(0)
             v = QLabel(val)
             v.setStyleSheet(
-                f"font-size: 24px; font-weight: 700; "
+                f"font-size: 28px; font-weight: 700; "
                 f"color: {col}; background: transparent;"
             )
             l = QLabel(lbl)
             l.setStyleSheet(
-                "font-size: 11px; color: #6c7086; background: transparent;"
+                "font-size: 11px; color: #525252; background: transparent;"
+                " text-transform: uppercase; letter-spacing: 0.5px;"
             )
             c.addWidget(v)
             c.addWidget(l)
@@ -1006,7 +1017,7 @@ class DiffiWindow(QMainWindow):
                     f"New: {sum(nt) / len(nt):.3f}s"
                 )
                 rl.setStyleSheet(
-                    "font-size: 12px; color: #6c7086; background: transparent;"
+                    "font-size: 12px; color: #525252; background: transparent;"
                 )
                 sl.addWidget(rl)
 
@@ -1020,7 +1031,7 @@ class DiffiWindow(QMainWindow):
                 f"\u26a0  {len(scr)} ID(s) returned different status codes"
             )
             scl.setStyleSheet(
-                "color: #f38ba8; font-weight: 600; font-size: 12px; "
+                "color: #ef4444; font-weight: 600; font-size: 12px; "
                 "background: transparent;"
             )
             sl.addWidget(scl)
@@ -1035,9 +1046,9 @@ class DiffiWindow(QMainWindow):
             sl.addWidget(mb)
 
         for title, items, col in [
-            ("Missing Fields", am, "#f38ba8"),
-            ("Extra Fields", ae, "#f9e2af"),
-            ("Type Changes", atc, "#89b4fa"),
+            ("Missing Fields", am, "#ef4444"),
+            ("Extra Fields", ae, "#f59e0b"),
+            ("Type Changes", atc, "#3b82f6"),
         ]:
             if items:
                 l = QLabel(f"{title} \u2014 {len(items)}")
@@ -1058,8 +1069,9 @@ class DiffiWindow(QMainWindow):
         # Per-ID
         pl = QLabel("Per-ID Breakdown")
         pl.setStyleSheet(
-            "font-size: 14px; font-weight: 600; color: #6c7086; "
-            "background: transparent; margin-top: 12px;"
+            "font-size: 11px; font-weight: 600; color: #525252; "
+            "background: transparent; text-transform: uppercase; "
+            "letter-spacing: 0.5px; margin-top: 12px;"
         )
         self._results_layout_inner.addWidget(pl)
         self._result_cards: list[ResultCard] = []

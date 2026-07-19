@@ -32,7 +32,7 @@ class ResultCard(QWidget):
         card = QFrame()
         card.setObjectName("card")
         cl = QVBoxLayout(card)
-        cl.setContentsMargins(16, 12, 16, 12)
+        cl.setContentsMargins(16, 14, 16, 14)
         cl.setSpacing(8)
 
         r = self._result

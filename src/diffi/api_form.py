@@ -31,7 +31,7 @@ class ApiFormWidget(QWidget):
         wrapper = QFrame()
         wrapper.setObjectName("card")
         wl = QVBoxLayout(wrapper)
-        wl.setContentsMargins(20, 16, 20, 16)
+        wl.setContentsMargins(20, 20, 20, 20)
         wl.setSpacing(12)
 
         title = QLabel(label)
@@ -180,7 +180,7 @@ class ApiFormWidget(QWidget):
         w.setObjectName("cardInner")
         l = QHBoxLayout(w)
         l.setContentsMargins(0, 0, 0, 0)
-        l.setSpacing(6)
+        l.setSpacing(4)
         cb = QCheckBox()
         cb.setChecked(True)
         ki = QLineEdit()
